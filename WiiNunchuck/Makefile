@@ -1,7 +1,7 @@
 PROG := nunchuck
 
 ifndef PORT
-  PORT := /dev/ttyUSB0
+  PORT := /dev/ttyACM0
 endif
 
 ifndef BAUD
@@ -21,7 +21,7 @@ ARDUINO_SRC=$(ARDUINO_HOME)/hardware/arduino/avr/cores/arduino
 
 CFLAGS=-c -g -Os -ffunction-sections -fdata-sections -MMD -mmcu=atmega328p
 CPPFLAGS=-c -g -Os -fno-exceptions -ffunction-sections -fdata-sections -fno-threadsafe-statics -MMD -mmcu=atmega328p
-DEFINES=-DF_CPU=16000000L -DARDUINO=10604 -DARDUINO_AVR_UNO -DARDUINO_ARCH_AVR
+DEFINES=-DF_CPU=16000000L -DARDUINO=10604 -DARDUINO_AVR_UNO -DARDUINO_ARCH_AVR -DTWI_FREQ=40000L
 INCLUDES=-I$(ARDUINO_HOME)/hardware/arduino/avr/cores/arduino -I$(ARDUINO_HOME)/hardware/arduino/avr/variants/standard
 
 OBJDIR=obj

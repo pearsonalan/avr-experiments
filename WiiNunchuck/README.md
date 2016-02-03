@@ -11,4 +11,35 @@ the Arduino 1.6.7 platform.  Also, since he mentioned that he needed
 to make modifications to the included TWI library, I have included
 the files for the TWI library here with the needed modifications.
 
+## Compiling and installing
+
+Compile:
+```
+make
+```
+
+Upload to Arduino:
+```
+make upload
+```
+
+If the Arduino is not connected to /dev/ttyACM0 as specified in the makefile,
+the port may be overridden by an environment variable:
+```
+PORT=/dev/ttyUSB0 make upload
+```
+
+## Running the program
+
+Wire the wii nunchuck as follows:
+
+Red: +5V
+White: Ground
+Green: Analog Pin 4
+Yellow: Analog Pin 5
+
+View the serial output of the program by running
+```
+screen /dev/ttyACM0 19200 
+```
 
