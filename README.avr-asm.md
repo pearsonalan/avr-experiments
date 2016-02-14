@@ -49,7 +49,7 @@ Showing the disassembly:
 ```
 set disassemble-next-line on
 show disassemble-next-linek
-``
+```
 
 Another cool way to do it is to use ASM layout:
 ```
