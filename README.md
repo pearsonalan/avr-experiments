@@ -15,3 +15,5 @@ experiments I have:
    oscilloscope and see the clock frequency that the Arduino was running at.
  * WiiNunchuck - code to interface an Arduino to a Nunchuck controller from a Nintendo Wii
 
+The file [README.avr-asm.md](README.avr-asm.md) has some notes on how to
+debug AVR assembly programs using `simavr` and `avr-gdb`.
