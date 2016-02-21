@@ -1,0 +1,4 @@
+*.vcd
+dump.*.out
+avr-sim
+avr-sim.dSYM
