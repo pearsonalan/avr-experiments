@@ -1,6 +1,7 @@
 *.elf
-*.d 
+*.d
 *.hex
 *.cof
 *.lst
 avr_memcpy.s
+*.o
