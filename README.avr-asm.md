@@ -1,5 +1,11 @@
 ## Notes on building/debugging AVR code using assembly
 
+# Disassemble an ihex file
+
+```
+avr-objdump -m avr -D -S file.hex
+```
+
 # running in a simulator
 
 Debug a .ihex file as so:
