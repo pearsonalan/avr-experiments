@@ -37,16 +37,11 @@ DEFINES=-DF_CPU=16000000L -DARDUINO=10604 -DARDUINO_AVR_UNO -DARDUINO_ARCH_AVR
 
 .PHONY: all upload
 
-all: memcopy.hex avr_memcpy.s avr_memcpy.hex simple_copy.s simple_copy.hex
-
-simple_copy.hex: simple_copy.elf
-simple_copy.elf: simple_copy.o
-simple_copy.o: simple_copy.c
+all: memcopy.hex avr_memcpy.s avr_memcpy.hex
 
 avr_memcpy.hex: avr_memcpy.elf
 avr_memcpy.elf: avr_memcpy.o
 avr_memcpy.o: avr_memcpy.c
-
 
 memcopy.hex: memcopy.asm
 	$(AVRA) -b memcopy.o -l memcopy.lst memcopy.asm
@@ -56,7 +51,6 @@ upload:
 
 clean:
 	-rm memcopy.lst memcopy.cof memcopy.eep.hex memcopy.hex memcopy.o
-	-rm simple_copy.hex simple_copy.elf simple_copy.o simple_copy.s simple_copy.d
 	-rm avr_memcpy.hex avr_memcpy.elf avr_memcpy.o avr_memcpy.s avr_memcpy.d
 
 
