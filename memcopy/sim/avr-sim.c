@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <libgen.h>
+#include <signal.h>
 
 #include "sim_avr.h"
 #include "avr_ioport.h"
@@ -41,9 +42,9 @@ void dump_mem()
 	}
 }
 
-void pin_changed_hook(struct avr_irq_t * irq, uint32_t value, void * param)
+void pin_changed_hook(struct avr_irq_t *irq, uint32_t value, void *param)
 {
-	printf("Pin change @%lld: %s => %d\n", avr->cycle, irq->name, value);
+	printf("Pin change @%ld: %s => %d\n", (long) avr->cycle, irq->name, value);
 	if (value == 1)
 	{
 		/* if the pin was set high, use that as a signal to dump the memory */
@@ -98,9 +99,9 @@ void show_ports(avr_t *avr)
 	}
 }
 
-avr_cycle_count_t termination_timer(struct avr_t * avr, avr_cycle_count_t when, void * param)
+avr_cycle_count_t termination_timer(struct avr_t *avr, avr_cycle_count_t when, void *param)
 {
-	printf("*** Termination timer called at %lld (avr cycle %lld)***\n", when, avr->cycle);
+	printf("*** Termination timer called at %ld (avr cycle %ld)***\n", (long) when, avr->cycle);
 	avr->state = cpu_Done;
 	return 0;
 }
