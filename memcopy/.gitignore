@@ -1,0 +1,6 @@
+*.elf
+*.d 
+*.hex
+*.cof
+*.lst
+avr_memcpy.s
