@@ -16,9 +16,39 @@
 avr_t *avr = NULL;
 avr_vcd_t vcd_file;
 
+void dump_mem()
+{
+	static int dump_number = 0;
+	char filename[256];
+	FILE *f = NULL;
+	size_t n;
+
+	sprintf(filename, "dump.%d.out", dump_number++);
+	f = fopen(filename, "w");
+	if (f != NULL)
+	{
+		printf("Dumping %d bytes of memory to %s\n", avr->ramend, filename);
+		n = fwrite(avr->data, 1, avr->ramend, f);
+		if (n != avr->ramend)
+		{
+			printf("Error dumping memory\n");
+		}
+		fclose(f);
+	}
+	else
+	{
+		printf("Cannot open %s\n", filename);
+	}
+}
+
 void pin_changed_hook(struct avr_irq_t * irq, uint32_t value, void * param)
 {
-	printf("Pin change: %s => %d\n", irq->name, value);
+	printf("Pin change @%lld: %s => %d\n", avr->cycle, irq->name, value);
+	if (value == 1)
+	{
+		/* if the pin was set high, use that as a signal to dump the memory */
+		dump_mem();
+	}
 }
 
 void sig_int(int sign)
@@ -70,7 +100,7 @@ void show_ports(avr_t *avr)
 
 avr_cycle_count_t termination_timer(struct avr_t * avr, avr_cycle_count_t when, void * param)
 {
-	printf("*** Termination timer called at %lld ***\n", when);
+	printf("*** Termination timer called at %lld (avr cycle %lld)***\n", when, avr->cycle);
 	avr->state = cpu_Done;
 	return 0;
 }
@@ -137,7 +167,7 @@ int main(int argc, char *argv[])
 	signal(SIGTERM, sig_int);
 
 	/* register a timer to terminate the loop */
-	avr_cycle_timer_register_usec(avr, 10000000, termination_timer, NULL);
+	avr_cycle_timer_register_usec(avr, 100000, termination_timer, NULL);
 
 	/* show port info */
 	show_ports(avr);
