@@ -32,7 +32,7 @@ AVRA=/usr/local/bin/avra
 
 MCU=atmega328p
 
-CFLAGS=-Os -Wall -Wextra -ffunction-sections -fdata-sections -MMD -mmcu=$(MCU)
+CFLAGS=-O0 -Wall -Wextra -ffunction-sections -fdata-sections -MMD -mmcu=$(MCU)
 DEFINES=-DF_CPU=16000000L -DARDUINO=10604 -DARDUINO_AVR_UNO -DARDUINO_ARCH_AVR
 
 .PHONY: all upload

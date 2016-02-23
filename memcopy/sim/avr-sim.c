@@ -101,7 +101,7 @@ void show_ports(avr_t *avr)
 
 avr_cycle_count_t termination_timer(struct avr_t *avr, avr_cycle_count_t when, void *param)
 {
-	printf("*** Termination timer called at %ld (avr cycle %ld)***\n", (long) when, avr->cycle);
+	printf("*** Termination timer called at %ld (avr cycle %llu) ***\n", (long) when, avr->cycle);
 	avr->state = cpu_Done;
 	return 0;
 }
@@ -109,23 +109,34 @@ avr_cycle_count_t termination_timer(struct avr_t *avr, avr_cycle_count_t when, v
 int main(int argc, char *argv[])
 {
 	int state;
+	int gdb = 0;
 	ihex_chunk_p chunk = NULL;
 	int ci, cnt;
 	const char *mmcu = "atmega328p";
-	const char *fname;
+	const char *fname, *progname;
+	
+	progname = *argv;
 
-	if (argc != 2) 
+	for (--argc, ++argv; argc; --argc, ++argv)
 	{
-		fprintf(stderr, "usage: %s hexfile\n", argv[0]);
+		if (**argv != '-')
+			break;
+		if (strcmp(*argv, "-g") == 0 || strcmp(*argv, "--gdb") == 0)
+			gdb = 1;
+	}
+
+	if (argc == 0) 
+	{
+		fprintf(stderr, "usage: %s hexfile\n", progname);
 		exit(1);
 	}
-	fname = argv[1];
+	fname = *argv;
 
 	printf("*** Creating MCU for %s ***\n", mmcu);
 	avr = avr_make_mcu_by_name(mmcu);
 	if (!avr)
 	{
-		fprintf(stderr, "%s: AVR '%s' not known\n", argv[0], mmcu);
+		fprintf(stderr, "%s: AVR '%s' not known\n", progname, mmcu);
 		exit(1);
 	}
 
@@ -147,12 +158,13 @@ int main(int argc, char *argv[])
 	printf("*** Loading flash memory into AVR ***\n");
 	avr_load_chunks(avr, chunk, cnt);
 
-	/* even if not setup at startup, activate gdb if crashing */
-#if 0
-	avr->gdb_port = 1234;
-	avr->state = cpu_Stopped;
-	avr_gdb_init(avr);
-#endif
+	/* activate gdb if requested */
+	if (gdb)
+	{
+		avr->gdb_port = 1234;
+		avr->state = cpu_Stopped;
+		avr_gdb_init(avr);
+	}
 
 	/* IRQ callback hooks */
 	avr_irq_register_notify(avr_io_getirq(avr, AVR_IOCTL_IOPORT_GETIRQ('B'), 0), pin_changed_hook, NULL); 
