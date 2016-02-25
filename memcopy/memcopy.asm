@@ -73,9 +73,35 @@ main:
 
 	call	toggle_b0		; toggle B0 to HIGH, then LOW to store memory to dump after fill_buffer
 
-end:
-	nop
-	rjmp	end			; do nothing forever
+	;;
+	;; memsest some data
+	;;
+
+	ldi	yl, LOW(0x300)		; load the address where we are going to write hex values into yh:yl
+	ldi	yh, HIGH(0x300)
+	ldi	r25, 16
+	ldi	r24, $de
+	call	memset
+	call	toggle_b0		; toggle B0 to HIGH, then LOW to store memory to dump after fill_buffer
+
+	;;
+	;; print the hex values for $00 - $FF to RAM
+	;;
+
+	ldi	yl, LOW(0x400)		; load the address where we are going to write hex values into yh:yl
+	ldi	yh, HIGH(0x400)
+	clr	r25			; resest r25 to be $00
+loop:
+	call	hexprint		; print the current value of r25
+	cpi	r25, $ff		; if we just printed $ff, it is done.
+	breq	loop_end		;   - so get out of the loop
+	inc	r25			; increment value to print
+	rjmp	loop			; and loop to repeat
+loop_end:
+	call	toggle_b0		; toggle B0 to dump ram again
+
+	;; infinite loop at the end to keep the PC from falling off the end of the world
+end:	rjmp	end			; do nothing forever
 
 
 
@@ -146,10 +172,10 @@ _fb_end:
 ;	R25		- count of bytes to fill
 ;
 ; Registers altered:
-;	temp (R16)
-;	Z (R31:R30)
-;	Y (R29:R28)
-;	R25
+;	temp (R16)	- contains the last byte that was copied
+;	Y (R29:R28)	- points at the end of destination buffer after the last copied byte
+;	Z (R31:R30)	- points at the end of the source buffer after the last byte read
+;	R25		- contains 0
 
 memcopy:
 	tst	r25		; test if done
@@ -183,10 +209,10 @@ _memcopy_end:
 ;	R25		- count of bytes to copy
 ;
 ; Registers altered:
-;	temp (R16)
-;	Z (R31:R30)
-;	Y (R29:R28)
-;	R25
+;	temp (R16)	- contains the last byte that was copied
+;	Y (R29:R28)	- points at the end of destination buffer after the last copied byte
+;	Z (R31:R30)	- points at the end of the source buffer after the last byte read
+;	R25		- contains 0
 
 pmemcopy:
 	tst	r25		; test if done
@@ -196,6 +222,73 @@ pmemcopy:
 	dec	r25		; decrement byte count register
 	rjmp	pmemcopy	; loop back
 _pmemcopy_end:
+	ret
+
+
+;================================
+; memset subroutine
+;
+; synopsis:
+;	Set up to 255 bytes in the buffer pointed to by Y register pair to the value
+;	in register r24. The count of bytes to set is passed in r25.
+;
+; inputs:
+;	Y (R29:R28)	- pointer to destination buffer
+;	R25		- count of bytes to fill
+;	R24		- byte to fill the destination with
+;
+; Registers altered:
+;	Y (R29:R28)	- points at the end of destination buffer after the last byte written
+;	R25		- contains 0
+
+memset:
+	tst	r25		; test if done
+	breq	_memset_end	; jump to end if done
+	st	y+, r24		; write byte to address in Y pointer and increment pointer
+	dec	r25		; decrement byte count register
+	rjmp	memset		; loop back
+_memset_end:
+	ret
+
+
+
+;================================
+; hexprint subroutine
+;
+; synopsis:
+;	Write the hex value of the contents of r25 to the 2 bytes pointed to
+;	by the Y register pair.
+;
+; inputs:
+;	Y (R29:R28)	- pointer to destination buffer
+;	R25		- value to write
+;
+; Registers altered:
+;	Y (R29:R28)	- points to the end of the destination buffer after the last byte written
+;	temp (R16)	- contains the last byte that was copied
+;	R17		- contains 'A'
+;	R18		- contains '0'
+
+hexprint:
+	ldi	r17, $30	; put '0' in r17
+	ldi	r18, ($41-$0A)	; put ('A'-10) in r18
+	mov	temp, r25	; copy the whole byte value to temp
+	andi	temp, $f0	; mask off the high nibble
+	swap	temp		; swap the high nibble into the low nibble
+	cpi	temp, 10	; compare the high nibble to 10
+	brge	_hp_1		; if temp is less than 10
+	add	temp, r17	;    add '0' to it to convert to a digit
+	rjmp	_hp_2		; else
+_hp_1:	add	temp, r18	;    add 'A' to it to conver to a hex letter
+_hp_2:	st	y+, temp	; store the hex digit for the high nibble to the buffer
+	mov	temp, r25	; copy the whole byte value to temp
+	andi	temp, $0f	; mask off the low nibble
+	cpi	temp, 10	; compare the low nibble to 10
+	brge	_hp_3		; if temp is less than 10
+	add	temp, r17	;    add '0' to it to convert to a digit
+	rjmp	_hp_4		; else
+_hp_3:	add	temp, r18	;    add 'A' to it to conver to a hex letter
+_hp_4:	st	y+, temp	; store it to the buffer
 	ret
 
 
