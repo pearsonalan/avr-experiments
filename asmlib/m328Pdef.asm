@@ -37,8 +37,8 @@
 ;* ...                         ;otherwise do something else
 ;*************************************************************************
 
-#ifndef _M328PDEF_INC_
-#define _M328PDEF_INC_
+.ifndef _M328PDEF_INC_
+.define _M328PDEF_INC_
 
 
 ;#pragma partinc 0
@@ -972,6 +972,6 @@
 
 .equ	INT_VECTORS_SIZE	= 52	; size in words
 
-#endif  /* _M328PDEF_INC_ */
+.endif 
 
 ; ***** END OF FILE ******************************************************

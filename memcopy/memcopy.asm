@@ -5,12 +5,12 @@
 ;*****************************************************************************
 
 .nolist
-.include "./m328Pdef.asm"
+.include "../asmlib/m328Pdef.asm"
+.include "../asmlib/regdefs.asm"
 .list
 
 .define BUFSZ 32
 
-.def temp = r16
 
 ;
 ; Set up the Interrupt Vector at 0x0000
@@ -46,14 +46,14 @@ main:
 	out	PORTB, temp
 	nop
 
-	call	toggle_b0		; toggle B0 to HIGH, then LOW to store initial memory to dump
+	call	toggle_b0		; toggle B0 to HIGH to trigger memory dump
 
 	ldi	r25, BUFSZ		; load the size of the source buffer into r25
 	ldi	yl, LOW(src)		; load the address of the source buffer into yh:yl
 	ldi	yh, HIGH(src)
-	call	fill_buffer		; invoke the fill_buffer routine
+	call	fillbuf			; invoke the fillbuf routine
 
-	call	toggle_b0		; toggle B0 to HIGH, then LOW to store memory to dump after fill_buffer
+	call	toggle_b0		; toggle B0 to HIGH to trigger memory dump
 
 	ldi	r25, BUFSZ		; load the size of the source buffer into r25
 	ldi	yl, LOW(dest)		; load the address of the destination buffer into yh:yl
@@ -62,7 +62,7 @@ main:
 	ldi	zh, HIGH(src)
 	call	memcopy			; invoke the memcopy routine
 
-	call	toggle_b0		; toggle B0 to HIGH, then LOW to store memory to dump after fill_buffer
+	call	toggle_b0		; toggle B0 to HIGH to trigger memory dump
 
 	ldi	r25, 14			; load the size of the message into r25
 	ldi	yl, LOW(dest)		; load the address of the destination buffer into yh:yl
@@ -71,7 +71,7 @@ main:
 	ldi	zh, HIGH(message<<1)	
 	call	pmemcopy		; invoke the pmemcopy routine
 
-	call	toggle_b0		; toggle B0 to HIGH, then LOW to store memory to dump after fill_buffer
+	call	toggle_b0		; toggle B0 to HIGH to trigger memory dump
 
 	;;
 	;; memsest some data
@@ -82,7 +82,8 @@ main:
 	ldi	r25, 16
 	ldi	r24, $de
 	call	memset
-	call	toggle_b0		; toggle B0 to HIGH, then LOW to store memory to dump after fill_buffer
+
+	call	toggle_b0		; toggle B0 to HIGH to trigger memory dump
 
 	;;
 	;; print the hex values for $00 - $FF to RAM
@@ -98,7 +99,7 @@ loop:
 	inc	r25			; increment value to print
 	rjmp	loop			; and loop to repeat
 loop_end:
-	call	toggle_b0		; toggle B0 to dump ram again
+	call	toggle_b0		; toggle B0 to HIGH to trigger memory dump
 
 	;; infinite loop at the end to keep the PC from falling off the end of the world
 end:	rjmp	end			; do nothing forever
@@ -127,170 +128,11 @@ toggle_b0:
 	ret
 
 
-;================================
-; fill_buffer subroutine
-;
-; synopsis:
-;	Fill the buffer pointed to by Y (r29:r28) with bytes from 0 .. r25
-;
-; inputs:
-;	Y (R29:R28)	- pointer to buffer
-;	R25		- count of bytes to fill
-;
-; Registers altered:
-;	temp (R16)
-;	Y (R29:R28)
-;	R25
-
-fill_buffer:
-	clr	temp			; clear temp register
-_fb_loop:
-	tst	r25			; test if done filling buffer
-	breq	_fb_end			; jump to end if done
-	st	y+, temp		; copy temp register into address pointed to by Y and increment pointer
-	inc	temp			; increment temp register
-	dec	r25			; decrememt counter register
-	rjmp	_fb_loop		; loop back
-_fb_end:
-	ret
-
-
-;================================
-; memcopy subroutine
-;
-; synopsis:
-;	Copy up to 255 bytes from the buffer referenced by the Z register pair
-;	to the buffer pointed to by Y register pair. The count of bytes to
-;	copy is passed in r25.
-;
-;	The source and destination buffers should not be overlapping.  The source
-;	and destination buffers are also assumed to be in the data segment.
-;
-; inputs:
-;	Y (R29:R28)	- pointer to destination buffer
-;	Z (R31:R30)	- pointer to source buffer in data memory
-;	R25		- count of bytes to fill
-;
-; Registers altered:
-;	temp (R16)	- contains the last byte that was copied
-;	Y (R29:R28)	- points at the end of destination buffer after the last copied byte
-;	Z (R31:R30)	- points at the end of the source buffer after the last byte read
-;	R25		- contains 0
-
-memcopy:
-	tst	r25		; test if done
-	breq	_memcopy_end	; jump to end if done
-	ld	temp, z+	; read byte into temp from Z pointer and increment pointer
-	st	y+, temp	; write byte to address in Y pointer and increment pointer
-	dec	r25		; decrement byte count register
-	rjmp	memcopy		; loop back
-_memcopy_end:
-	ret
-
-
-;================================
-; pmemcopy subroutine
-;
-; synopsis:
-;	Copy up to 255 bytes from the buffer referenced by the Z register pair
-;	to the buffer pointed to by Y register pair. The count of bytes to
-;	copy is passed in r25.
-;
-;	The source buffer (Z) must reference an address in program memory.
-;	The destination buffer (Y) must be in the data segment.
-;
-;	The subroutine is the same as the memcopy subroutine except that the
-;	LPM instruction is used to read program memory instad of the LD
-;	instruction which can only read data memory.
-;
-; inputs:
-;	Y (R29:R28)	- pointer to destination buffer in data memory
-;	Z (R31:R30)	- pointer to source buffer in program memory
-;	R25		- count of bytes to copy
-;
-; Registers altered:
-;	temp (R16)	- contains the last byte that was copied
-;	Y (R29:R28)	- points at the end of destination buffer after the last copied byte
-;	Z (R31:R30)	- points at the end of the source buffer after the last byte read
-;	R25		- contains 0
-
-pmemcopy:
-	tst	r25		; test if done
-	breq	_pmemcopy_end	; jump to end if done
-	lpm	temp, z+	; read byte into temp from Z pointer and increment pointer
-	st	y+, temp	; write byte to address in Y pointer and increment pointer
-	dec	r25		; decrement byte count register
-	rjmp	pmemcopy	; loop back
-_pmemcopy_end:
-	ret
-
-
-;================================
-; memset subroutine
-;
-; synopsis:
-;	Set up to 255 bytes in the buffer pointed to by Y register pair to the value
-;	in register r24. The count of bytes to set is passed in r25.
-;
-; inputs:
-;	Y (R29:R28)	- pointer to destination buffer
-;	R25		- count of bytes to fill
-;	R24		- byte to fill the destination with
-;
-; Registers altered:
-;	Y (R29:R28)	- points at the end of destination buffer after the last byte written
-;	R25		- contains 0
-
-memset:
-	tst	r25		; test if done
-	breq	_memset_end	; jump to end if done
-	st	y+, r24		; write byte to address in Y pointer and increment pointer
-	dec	r25		; decrement byte count register
-	rjmp	memset		; loop back
-_memset_end:
-	ret
-
-
-
-;================================
-; hexprint subroutine
-;
-; synopsis:
-;	Write the hex value of the contents of r25 to the 2 bytes pointed to
-;	by the Y register pair.
-;
-; inputs:
-;	Y (R29:R28)	- pointer to destination buffer
-;	R25		- value to write
-;
-; Registers altered:
-;	Y (R29:R28)	- points to the end of the destination buffer after the last byte written
-;	temp (R16)	- contains the last byte that was copied
-;	R17		- contains 'A'
-;	R18		- contains '0'
-
-hexprint:
-	ldi	r17, $30	; put '0' in r17
-	ldi	r18, ($41-$0A)	; put ('A'-10) in r18
-	mov	temp, r25	; copy the whole byte value to temp
-	andi	temp, $f0	; mask off the high nibble
-	swap	temp		; swap the high nibble into the low nibble
-	cpi	temp, 10	; compare the high nibble to 10
-	brge	_hp_1		; if temp is less than 10
-	add	temp, r17	;    add '0' to it to convert to a digit
-	rjmp	_hp_2		; else
-_hp_1:	add	temp, r18	;    add 'A' to it to conver to a hex letter
-_hp_2:	st	y+, temp	; store the hex digit for the high nibble to the buffer
-	mov	temp, r25	; copy the whole byte value to temp
-	andi	temp, $0f	; mask off the low nibble
-	cpi	temp, 10	; compare the low nibble to 10
-	brge	_hp_3		; if temp is less than 10
-	add	temp, r17	;    add '0' to it to convert to a digit
-	rjmp	_hp_4		; else
-_hp_3:	add	temp, r18	;    add 'A' to it to conver to a hex letter
-_hp_4:	st	y+, temp	; store it to the buffer
-	ret
-
+.include "../asmlib/fillbuf.asm"
+.include "../asmlib/hexprint.asm"
+.include "../asmlib/memcopy.asm"
+.include "../asmlib/memset.asm"
+.include "../asmlib/pmemcopy.asm"
 
 
 ;================================
