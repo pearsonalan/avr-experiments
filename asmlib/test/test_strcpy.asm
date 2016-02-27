@@ -65,6 +65,17 @@ main:
 
 	call	toggle_b0		; toggle B0 to HIGH to trigger memory dump
 
+	ldi	yl, $00			; load the address of the destination buffer into yh:yl
+	ldi	yh, $04
+	ldi	zl, LOW(message<<1)	; load the address of the source buffer into zh:zl
+	ldi	zh, HIGH(message<<1) 
+	call	pstrcpy			; invoke the memcopy routine
+	ldi	zl, LOW(message<<1)	; load the address of the source buffer into zh:zl
+	ldi	zh, HIGH(message<<1) 
+	call	pstrcpy			; invoke the memcopy routine
+
+	call	toggle_b0		; toggle B0 to HIGH to trigger memory dump
+
 	;; infinite loop at the end to keep the PC from falling off the end of the world
 end:	rjmp	end			; do nothing forever
 
@@ -92,5 +103,14 @@ toggle_b0:
 
 
 .include "../strcpy.asm"
+.include "../pstrcpy.asm"
 
 	
+;================================
+; Program data
+;
+
+.cseg
+
+message:
+	.db	"Hello World", $0D, $0A, 0
