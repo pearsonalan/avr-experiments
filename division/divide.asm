@@ -5,7 +5,7 @@
 ;*****************************************************************************
 
 .nolist
-.include "./m328Pdef.asm"
+.include "../asmlib/m328Pdef.asm"
 .list
 
 ;
@@ -56,6 +56,29 @@ d_2:	rol	rem		;shift dividend into remainder
 d_3:	sec			;    set carry to be shifted into result
 	rjmp	d_1
 
+
+;======================
+; toggle_b0 subroutine
+;
+; toggles pin B0 high then low as a signal to the simulator to dump the 
+; contents of the memory.
+;
+; Registers altered: temp(r16)
+;
+
+toggle_b0:
+	ldi	temp, (1<<PINB0)	; set B0 high
+	out	PORTB, temp
+
+	nop
+
+	clr	temp			; set B0 low
+	out	PORTB, temp
+
+	nop
+	ret
+
+
 ;======================
 ; Main body of program:
 
@@ -64,8 +87,17 @@ main:
 	ldi	dv, 6
 	call	div
 	
+	ldd	
 
 end:	rjmp	end			; do nothing forever
 
 
 
+;================================
+; Program data
+;
+
+.cseg
+
+result_message:
+	.db	"The result is ", 0
