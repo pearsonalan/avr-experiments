@@ -1,7 +1,7 @@
 ;*****************************************************************************
 ; hexprint.asm
 ;
-; Assembly routine to conver a digit to its hex representation in ascii
+; Assembly routine to convert a digit to its hex representation in ascii
 ;*****************************************************************************
 
 ;================================

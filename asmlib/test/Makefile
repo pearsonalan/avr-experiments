@@ -37,7 +37,7 @@ DEFINES=-DF_CPU=16000000L -DARDUINO=10604 -DARDUINO_AVR_UNO -DARDUINO_ARCH_AVR
 
 .PHONY: all upload
 
-all: test_strcpy.hex test_serial_blocking.hex
+all: test_strcpy.hex test_serial_blocking.hex test_hexprint.hex
 
 test_serial_blocking.hex: test_serial_blocking.asm
 	$(AVRA) -b test_serial_blocking.o -l test_serial_blocking.lst test_serial_blocking.asm
@@ -45,9 +45,13 @@ test_serial_blocking.hex: test_serial_blocking.asm
 test_strcpy.hex: test_strcpy.asm
 	$(AVRA) -b test_strcpy.o -l test_strcpy.lst test_strcpy.asm
 
+test_hexprint.hex: test_hexprint.asm
+	$(AVRA) -b test_hexprint.o -l test_hexprint.lst test_hexprint.asm
+
 upload:
 	avrdude -v -p m328p -c arduino -b $(BAUD) -P $(PORT) -U flash:w:test_strcpy.hex
 
 clean:
 	-rm test_strcpy.lst test_strcpy.cof test_strcpy.eep.hex test_strcpy.hex test_strcpy.o
 	-rm test_serial_blocking.lst test_serial_blocking.cof test_serial_blocking.eep.hex test_serial_blocking.hex test_serial_blocking.o
+	-rm test_hexprint.lst test_hexprint.cof test_hexprint.eep.hex test_hexprint.hex test_hexprint.o
