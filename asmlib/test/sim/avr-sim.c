@@ -52,6 +52,11 @@ void pin_changed_hook(struct avr_irq_t *irq, uint32_t value, void *param)
 	}
 }
 
+static void uart_output_cb(struct avr_irq_t *irq, uint32_t value, void *param)
+{
+	fputc(value, stdout);
+}
+
 void sig_int(int sign)
 {
 	printf("signal caught, simavr terminating\n");
@@ -101,7 +106,7 @@ void show_ports(avr_t *avr)
 
 avr_cycle_count_t termination_timer(struct avr_t *avr, avr_cycle_count_t when, void *param)
 {
-	printf("*** Termination timer called at %ld (avr cycle %llu) ***\n", (long) when, avr->cycle);
+	printf("*** Termination timer called at %ld (avr cycle %ld) ***\n", (long) when, (long) avr->cycle);
 	avr->state = cpu_Done;
 	return 0;
 }
@@ -169,6 +174,10 @@ int main(int argc, char *argv[])
 	/* IRQ callback hooks */
 	avr_irq_register_notify(avr_io_getirq(avr, AVR_IOCTL_IOPORT_GETIRQ('B'), 0), pin_changed_hook, NULL); 
 
+	/* hook up the UART to stdout */
+	avr_irq_register_notify(avr_io_getirq(avr, AVR_IOCTL_UART_GETIRQ('0'), UART_IRQ_OUTPUT),
+		uart_output_cb, NULL);
+
 	/*	VCD file initialization */
 	printf("*** Initializing VCD Output ***\n");
 	avr_vcd_init(avr, "wave.vcd", &vcd_file, 10000 /* usec */);
@@ -180,7 +189,7 @@ int main(int argc, char *argv[])
 	signal(SIGTERM, sig_int);
 
 	/* register a timer to terminate the loop */
-	avr_cycle_timer_register_usec(avr, 100000, termination_timer, NULL);
+	avr_cycle_timer_register_usec(avr, 1000000, termination_timer, NULL);
 
 	/* show port info */
 	show_ports(avr);

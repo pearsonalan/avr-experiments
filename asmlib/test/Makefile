@@ -37,7 +37,10 @@ DEFINES=-DF_CPU=16000000L -DARDUINO=10604 -DARDUINO_AVR_UNO -DARDUINO_ARCH_AVR
 
 .PHONY: all upload
 
-all: test_strcpy.hex
+all: test_strcpy.hex test_serial_blocking.hex
+
+test_serial_blocking.hex: test_serial_blocking.asm
+	$(AVRA) -b test_serial_blocking.o -l test_serial_blocking.lst test_serial_blocking.asm
 
 test_strcpy.hex: test_strcpy.asm
 	$(AVRA) -b test_strcpy.o -l test_strcpy.lst test_strcpy.asm
@@ -47,3 +50,4 @@ upload:
 
 clean:
 	-rm test_strcpy.lst test_strcpy.cof test_strcpy.eep.hex test_strcpy.hex test_strcpy.o
+	-rm test_serial_blocking.lst test_serial_blocking.cof test_serial_blocking.eep.hex test_serial_blocking.hex test_serial_blocking.o
