@@ -17,13 +17,15 @@
 ;
 ; Registers altered:
 ;	Y (R29:R28)	- 
+;	Z (R31:R30)
 ;	R25		- 
 ;	R16 (temp)	
 
 strrev:
-	tst	r25		; test if done
-	breq	_strrev_end	; jump to end if done
-_strrev_end:
+	clr	r0
+	movw	zh:zl, yh:yl
+	add	zl, r25
+	adc	zh, r0
 	ret
 
 

@@ -1,7 +1,7 @@
 ;*****************************************************************************
-; test_strcpy.asm
+; test_strrev.asm
 ;
-; Assembly program to test the operation of the strcpy implementation
+; Assembly program to test the operation of the strrev implementation
 ;*****************************************************************************
 
 .nolist
@@ -40,6 +40,20 @@ main:
 	out	PORTB, temp
 	nop
 
+	clr	r0
+
+	ldi	yl, $fe
+	ldi	yh, $01
+	
+	ldi	r16, 10
+	add	yl, r16
+	adc	yh, r0
+
+	ldi	yl, $00
+	ldi	yh, $03
+	subi	yl, 1
+	sbc	yh, r0
+
 	ldi	zl, $00		; load the address of the source buffer into zh:zl
 	ldi	zh, $02 
 	
@@ -55,17 +69,7 @@ main:
 
 	ldi	yl, $00			; load the address of the destination buffer into yh:yl
 	ldi	yh, $03
-	ldi	zl, $00			; load the address of the source buffer into zh:zl
-	ldi	zh, $02 
-	call	strcpy			; invoke the strcpy routine
-
-	call	toggle_b0		; toggle B0 to HIGH to trigger memory dump
-
-	ldi	yl, $00			; load the address of the destination buffer into yh:yl
-	ldi	yh, $04
-	ldi	zl, LOW(message<<1)	; load the address of the source buffer into zh:zl
-	ldi	zh, HIGH(message<<1) 
-	call	pstrcpy			; invoke the pstrcpy routine
+	call	strrev			; invoke the strcpy routine
 
 	call	toggle_b0		; toggle B0 to HIGH to trigger memory dump
 
@@ -95,8 +99,7 @@ toggle_b0:
 	ret
 
 
-.include "../strcpy.asm"
-.include "../pstrcpy.asm"
+.include "../strrev.asm"
 
 	
 ;================================
@@ -107,3 +110,4 @@ toggle_b0:
 
 message:
 	.db	"Hello World", $0D, $0A, 0
+
