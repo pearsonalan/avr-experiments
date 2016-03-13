@@ -40,35 +40,61 @@ main:
 	out	PORTB, temp
 	nop
 
-	clr	r0
-
-	ldi	yl, $fe
-	ldi	yh, $01
-	
-	ldi	r16, 10
-	add	yl, r16
-	adc	yh, r0
-
+	; write 9 bytes to $0300
 	ldi	yl, $00
 	ldi	yh, $03
-	subi	yl, 1
-	sbc	yh, r0
+	ldi	r25, 9
+	call	fillbuf
 
-	ldi	zl, $00		; load the address of the source buffer into zh:zl
-	ldi	zh, $02 
-	
-	ldi	temp, $41
-	st	z+, temp
-	inc	temp
-	st	z+, temp
-	inc	temp
-	st	z+, temp
+	; write 16 bytes to $03f8 
+	ldi	yl, $f8	
+	ldi	yh, $03
+	ldi	r25, 16
+	call	fillbuf
+
+	; write 1 byte to $0380
+	ldi	r16, $80
+	sts	$0380, r16
+
+	; write 2 bytes to $0390
+	ldi	r16, $90
+	sts	$0390, r16
+	inc	r16
+	sts	$0391, r16
+
+	; write 3 bytes to $03a0
+	ldi	r16, $a0
+	sts	$03a0, r16
+	inc	r16
+	sts	$03a1, r16
+	inc	r16
+	sts	$03a2, r16
 
 	call	toggle_b0		; toggle B0 to HIGH to trigger memory dump
 
-
-	ldi	yl, $00			; load the address of the destination buffer into yh:yl
+	ldi	yl, $00
 	ldi	yh, $03
+	ldi	r25, 9
+	call	strrev
+
+	ldi	yl, $f8			; load the address of the destination buffer into yh:yl
+	ldi	yh, $03
+	ldi	r25, 16
+	call	strrev			; invoke the strcpy routine
+
+	ldi	yl, $80			; load the address of the destination buffer into yh:yl
+	ldi	yh, $03
+	ldi	r25, 1
+	call	strrev			; invoke the strcpy routine
+
+	ldi	yl, $90			; load the address of the destination buffer into yh:yl
+	ldi	yh, $03
+	ldi	r25, 2
+	call	strrev			; invoke the strcpy routine
+
+	ldi	yl, $a0			; load the address of the destination buffer into yh:yl
+	ldi	yh, $03
+	ldi	r25, 3
 	call	strrev			; invoke the strcpy routine
 
 	call	toggle_b0		; toggle B0 to HIGH to trigger memory dump
@@ -99,6 +125,7 @@ toggle_b0:
 	ret
 
 
+.include "../fillbuf.asm"
 .include "../strrev.asm"
 
 	
