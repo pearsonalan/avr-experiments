@@ -88,3 +88,32 @@ usart_transmit_buffer:
 _utbuf_end:
 	ret
 
+
+
+;================================================================
+; usart_transmit_pbuffer subroutine
+;
+; synopsis:
+;	Send up to 255 bytes from the program memory buffer referenced by the Z register pair
+;	to the USART.  The count of bytes to send is passed in r25
+;
+; inputs:
+;	Z (R31:R30)	- pointer to source buffer in program memory
+;	R25		- count of bytes to copy
+;
+; Registers altered and value on exit:
+;	Z (R31:R30)	- points at the end of the source buffer after the last byte read
+;	R19		- contains the last byte that was copied
+;	R25		- contains 0
+;
+
+usart_transmit_pbuffer:
+	tst	r25			; test if done sending bytes
+	breq	_utpbuf_end		; jump to end if done
+	lpm	r19, z+			; read byte into r19 from Z pointer and increment pointer
+	rcall	usart_transmit_byte	; invoke usar_transmit_byte to send the value in R19
+	dec	r25			; decrement byte count register
+	rjmp	usart_transmit_pbuffer	; loop back
+_utpbuf_end:
+	ret
+

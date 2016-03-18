@@ -1,16 +1,16 @@
 ;***** Subroutine Register Variables
 
 .def	rem	=r15		;remainder
-.def	res	=r16		;result
-.def	dd	=r16		;dividend
-.def	dv	=r17		;divisor
-.def	cnt	=r18		;loop counter
+.def	res	=r17		;result
+.def	dd	=r17		;dividend
+.def	dv	=r18		;divisor
+.def	cnt	=r16		;loop counter
 
 ;***** Code
 
 div:
 	sub	rem, rem	;clear remainder and carry
-	ldi	cnt,9		;init loop counter
+	ldi	cnt, 9		;init loop counter
 d_1:	rol	dd		;shift left dividend
 	dec	cnt		;decrement counter
 	brne	d_2		;if done

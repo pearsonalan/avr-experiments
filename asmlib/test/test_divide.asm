@@ -10,10 +10,9 @@
 .list
 
 .def	rem	=r15		;remainder
-.def	res	=r16		;result
-.def	dd	=r16		;dividend
-.def	dv	=r17		;divisor
-.def	cnt	=r18		;loop counter
+.def	res	=r17		;result
+.def	dd	=r17		;dividend
+.def	dv	=r18		;divisor
 
 ;
 ; Set up the Interrupt Vector at 0x0000 to jump to the program start
@@ -46,17 +45,35 @@ main:
 	out	PORTB, temp
 	nop
 
+	;; Compute 74 / 6 = 12 R 2
+	;; expect $0100 => $0C
+	;;	  $0108 => $03
+	;;
 	ldi	dd, 74
 	ldi	dv, 6
 	call	div
 	sts	$0100, res
 	sts	$0108, rem
 
+	;; Compute 100 / 10 = 10 R 0
+	;; expect $0110 => $0A
+	;;	  $0118 => $00
+	;;
 	ldi	dd, 100
 	ldi	dv, 10
 	call	div
 	sts	$0110, res
 	sts	$0118, rem
+
+	;; Compute 130 / 0 = ?
+	;; expect $0110 => $0A
+	;;	  $0118 => $00
+	;;
+	ldi	dd, 130
+	ldi	dv, 0
+	call	div
+	sts	$0120, res
+	sts	$0128, rem
 
 	call	toggle_b0		; toggle B0 to HIGH to trigger memory dump
 
