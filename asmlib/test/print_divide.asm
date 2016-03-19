@@ -38,9 +38,29 @@ reset:
 ; Main body of program:
 
 main:
+	;; compute 144 / 6 (should be 24 R 0  => $18 R $00)
 	ldi	r17, 144
 	ldi	r18, 6
+	rcall	divide_and_print
 
+	;; compute 193 / 13 (should be 14 R 11  => $0E R $0B)
+	ldi	r17, 193
+	ldi	r18, 13
+	rcall	divide_and_print
+
+	;; compute 33 / 43 (should be 0 R 33  => $0 R $21)
+	ldi	r17, 33
+	ldi	r18, 43
+	rcall	divide_and_print
+
+	;; compute 10 / 1 (should be 10 R 0  => $0A R $00)
+	ldi	r17, 10
+	ldi	r18, 1
+	rcall	divide_and_print
+
+	;; compute 80 / 0 (should be ?)
+	ldi	r17, 80
+	ldi	r18, 0
 	rcall	divide_and_print
 
 end:	rjmp	end
