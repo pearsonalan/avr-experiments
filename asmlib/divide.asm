@@ -1,3 +1,9 @@
+;
+; AVR Division routines
+;
+; Taken from ATMEL application note 200
+;
+
 ;***** Subroutine Register Variables
 
 .def	rem	=r15		;remainder
@@ -8,19 +14,19 @@
 
 ;***** Code
 
-div:
+div8u:
 	sub	rem, rem	;clear remainder and carry
 	ldi	cnt, 9		;init loop counter
-d_1:	rol	dd		;shift left dividend
+d8u_1:	rol	dd		;shift left dividend
 	dec	cnt		;decrement counter
-	brne	d_2		;if done
+	brne	d8u_2		;if done
 	ret			;    return
-d_2:	rol	rem		;shift dividend into remainder
+d8u_2:	rol	rem		;shift dividend into remainder
 	sub	rem, dv		;remainder = remainder - divisor
-	brcc	d_3		;if result negative
+	brcc	d8u_3		;if result negative
 	add	rem, dv		;    restore remainder
 	clc			;    clear carry to be shifted into result
-	rjmp	d_1		;else
-d_3:	sec			;    set carry to be shifted into result
-	rjmp	d_1
+	rjmp	d8u_1		;else
+d8u_3:	sec			;    set carry to be shifted into result
+	rjmp	d8u_1
 

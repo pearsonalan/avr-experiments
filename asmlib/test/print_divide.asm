@@ -81,7 +81,7 @@ end:	rjmp	end
 ;
 divide_and_print:
 	;; on entry r17 is the dividend r18 is the divisor
-	rcall	div
+	rcall	div8u
 
 	;; write the first part of the message to the USART
 	ldi	zl, LOW(message1<<1)	; load the address of the data to print into zh:zl

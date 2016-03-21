@@ -51,7 +51,7 @@ main:
 	;;
 	ldi	dd, 74
 	ldi	dv, 6
-	call	div
+	call	div8u
 	sts	$0100, res
 	sts	$0108, rem
 
@@ -61,7 +61,7 @@ main:
 	;;
 	ldi	dd, 100
 	ldi	dv, 10
-	call	div
+	call	div8u
 	sts	$0110, res
 	sts	$0118, rem
 
@@ -71,7 +71,7 @@ main:
 	;;
 	ldi	dd, 130
 	ldi	dv, 0
-	call	div
+	call	div8u
 	sts	$0120, res
 	sts	$0128, rem
 
