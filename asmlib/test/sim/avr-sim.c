@@ -182,6 +182,7 @@ int main(int argc, char *argv[])
 	printf("*** Initializing VCD Output ***\n");
 	avr_vcd_init(avr, "wave.vcd", &vcd_file, 10000 /* usec */);
 	avr_vcd_add_signal(&vcd_file, avr_io_getirq(avr, AVR_IOCTL_IOPORT_GETIRQ('B'), 0), 1, "B0" );
+	avr_vcd_add_signal(&vcd_file, avr_io_getirq(avr, AVR_IOCTL_IOPORT_GETIRQ('D'), 4), 1, "D4" );
 	avr_vcd_start(&vcd_file);
 
 	/* set up interrupt handlers */

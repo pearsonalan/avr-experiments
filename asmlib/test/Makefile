@@ -37,7 +37,7 @@ DEFINES=-DF_CPU=16000000L -DARDUINO=10604 -DARDUINO_AVR_UNO -DARDUINO_ARCH_AVR
 
 .PHONY: all upload_test_strcpy
 
-HEXFILES = test_strcpy.hex test_serial_blocking.hex test_hexprint.hex test_strrev.hex test_divide.hex print_divide.hex
+HEXFILES = test_strcpy.hex test_serial_blocking.hex test_hexprint.hex test_strrev.hex test_divide.hex print_divide.hex test_delay.hex
 
 EEPHEXFILES = $(addsuffix .eep.hex, $(basename $(HEXFILES)))
 LSTFILES = $(addsuffix .lst, $(basename $(HEXFILES)))
@@ -58,4 +58,5 @@ clean:
 test_strrev.hex: test_strrev.asm ../strrev.asm
 test_strcpy.hex: test_strcpy.asm ../strcpy.asm
 test_divide.hex: test_divide.asm ../divide.asm
+test_delay.hex: test_delay.asm ../basic-delay.asm
 print_divide.hex: print_divide.asm ../divide.asm
