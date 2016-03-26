@@ -5,6 +5,12 @@
 ; driven LCD. This may be made more general purpose in the future, but
 ; for now, it supports 2x20 displays.
 ;
+; The code in this file implements the 4-bit data bus operation mode which
+; requires fewer pins than the 8-bit data bus mode, but writes take longer.
+;
+; For reference, the Data Sheet for the HD44780U driver is at
+;  https://www.sparkfun.com/datasheets/LCD/HD44780.pdf
+;
 ; The Device should be connected to the LCD as follows:
 ;	B0 => DB4
 ;	B1 => DB5
@@ -99,6 +105,12 @@ basic_delay_l:
 ; some fixed delays
 ;
 
+; 500ns = 2 iterations
+delay_500_ns:
+	ldi	r25, $00
+	ldi	r24, $02
+	rjmp	basic_delay_l
+
 ; 10ms => 40,000 iterations (40,000 = $9C40)
 delay_10_ms:
 	ldi	r25, $9c
@@ -130,10 +142,12 @@ delay_40_ms:
 	rjmp	basic_delay_l
 
 
-;================================
+;=============================================================================
 ; lcd_init subroutine
 ;
-; synopsis
+; synopsis: perform initialization of the HD44780 LCD.  This implements the
+;	Initialization By Instruction sequence for 4 bit operation mode
+;	as described on Page 46 of the datasheet.
 ;
 ; inputs:
 ;
@@ -164,3 +178,43 @@ lcd_init:
 	ret
 
 
+;================================
+; lcd_read_inst subroutine
+;
+; synopsis
+;
+; inputs:
+;
+; Registers altered:
+;
+lcd_read_inst:
+	; set RW high to indicate that we are reading
+	; set DB[4..7] low
+	; set RS low
+	ldi	temp, $40
+	out	PORTB, temp
+
+	rcall	lcd_pulse_e
+
+	; set RW low
+	; set DB[4..7] high
+	ldi	temp, $0F
+	out	PORTB, temp
+
+	ret
+
+
+; pulse the ENABLE signal:
+;   Set ENABLE (PIN B5) high
+;   wait 500ns	
+;   wait one cycle (do a nop)
+;   read the 4 data bus pins PORTB[0..3]
+;   Set Enable low
+lcd_pulse_e:
+	sbi	PORTB, 5
+	rcall	delay_500_ns
+	nop
+	in	r16, PORTB
+	andi	r16, $0f
+	cbi	PORTB, 5
+	ret
