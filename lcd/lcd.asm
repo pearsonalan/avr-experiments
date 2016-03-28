@@ -1,4 +1,4 @@
-;*****************************************************************************
+;=============================================================================
 ; lcd.asm
 ;
 ; An of assembly program to interface with an Hitachi HD44780
@@ -20,7 +20,7 @@
 ;	B5 => ENABLE
 ;	B6 => READ/WRITE
 ;
-;*****************************************************************************
+;=============================================================================
 
 ;; Include the standard definitions for PORTS and REGISTERS
 .nolist
@@ -28,25 +28,73 @@
 .list
 
 
-;==============
-; Declarations:
+;=============================================================================
+; Declarations
 
 .def temp      = r16
 
 
-;
-; Set up the Interrupt Vector
+
+;=============================================================================
+; Interrupt Vector
 ;
 
 .org 0x0000
-	jmp reset		; PC = 0x0000	RESET
+	jmp reset				; Reset Handler
+	jmp unhandled_interrupt			; IRQ0 Handler
+	jmp unhandled_interrupt			; IRQ1 Handler
+	jmp unhandled_interrupt			; PCINT0 Handler
+	jmp unhandled_interrupt			; PCINT1 Handler
+	jmp unhandled_interrupt			; PCINT2 Handler
+	jmp unhandled_interrupt			; Watchdog Timer Handler
+	jmp unhandled_interrupt			; Timer2 Compare A Handler
+	jmp unhandled_interrupt			; Timer2 Compare B Handler
+	jmp unhandled_interrupt			; Timer2 Overflow Handler
+	jmp unhandled_interrupt			; Timer1 Capture Handler
+	jmp unhandled_interrupt			; Timer1 Compare A Handler
+	jmp unhandled_interrupt			; Timer1 Compare B Handler
+	jmp unhandled_interrupt			; Timer1 Overflow Handler
+	jmp unhandled_interrupt			; Timer0 Compare A Handler
+	jmp unhandled_interrupt			; Timer0 Compare B Handler
+	jmp unhandled_interrupt			; Timer0 Overflow Handler
+	jmp unhandled_interrupt			; SPI Transfer Complete Handler
+	jmp unhandled_interrupt			; USART, RX Complete Handler
+	jmp unhandled_interrupt			; USART, UDR Empty Handler
+	jmp unhandled_interrupt			; USART, TX Complete Handler
+	jmp unhandled_interrupt			; ADC Conversion Complete Handler
+	jmp unhandled_interrupt			; EEPROM Ready Handler
+	jmp unhandled_interrupt			; Analog Comparator Handler
+	jmp unhandled_interrupt			; 2-wire Serial Interface Handler
+	jmp unhandled_interrupt			; Store Program Memory Ready Handler
 
 
 
-;======================
-; initialization
+
+;
+; All Code should start after the Interrupt Vector, so the first real code 
+; should be at address 0x0034
+;
 
 .org 0x0034
+
+
+
+;=============================================================================
+; unhandled_interrupt subroutine
+; 
+; Synopsis:
+;	Unhandled Interrupt Vector routine. All unsed slots in the 
+;	interrupt vector should point here, which simply does an iret, 
+;	this implementing a nop routine
+;
+
+unhandled_interrupt:
+	reti
+
+
+;=============================================================================
+; initialization
+
 reset:
 	clr	r1			; set the SREG to 0
 	out	SREG, r1
@@ -101,20 +149,34 @@ basic_delay_l:
 	brne	basic_delay_l
 	ret
 
+;=============================================================================
 ;
-; some fixed delays
-;
+; some fixed delays.  These are pre-calculated numbers of loops to
+; perform in the basic_delay_l routine. These routines will end up
+; delaying a bit longer than the method names suggest because they 
+; don't account for 2 LDI instructions, one RMP and one RET instruction.
+; Thise means that the actual delays here are 8 clock cyles more than
+; the requested time (or about 500ns too much.  To get this more exact
+; the number of loops requested from basic_delay_l should be reduced
+; by 2 in each case.
+;    
 
-; 500ns = 2 iterations
+; 500ns = 2 iterations (because of the reason above, this ends up being more like 1000ns)
 delay_500_ns:
 	ldi	r25, $00
 	ldi	r24, $02
 	rjmp	basic_delay_l
 
-; 10ms => 40,000 iterations (40,000 = $9C40)
-delay_10_ms:
-	ldi	r25, $9c
-	ldi	r24, $40
+; 40us => 160 iterations ($00A0)
+delay_40_us:
+	ldi	r25, $0A
+	ldi	r24, $00
+	rjmp	basic_delay_l
+
+; 100us => 400 iterations ($0190)
+delay_100_us:
+	ldi	r25, $01
+	ldi	r24, $90
 	rjmp	basic_delay_l
 
 ; 4.1ms => 16,400 iterations ($4010)
@@ -123,10 +185,10 @@ delay_4_1_ms:
 	ldi	r24, $10
 	rjmp	basic_delay_l
 
-; 100us => 400 iterations ($0190)
-delay_100_us:
-	ldi	r25, $01
-	ldi	r24, $90
+; 10ms => 40,000 iterations (40,000 = $9C40)
+delay_10_ms:
+	ldi	r25, $9c
+	ldi	r24, $40
 	rjmp	basic_delay_l
 
 ; 40ms => 160,000 iterations => 65536 + 65536 + 28928
@@ -145,45 +207,34 @@ delay_40_ms:
 ;=============================================================================
 ; lcd_init subroutine
 ;
-; synopsis: perform initialization of the HD44780 LCD.  This implements the
+; Synopsis:
+;	Perform initialization of the HD44780 LCD.  This implements the
 ;	Initialization By Instruction sequence for 4 bit operation mode
 ;	as described on Page 46 of the datasheet.
 ;
-; inputs:
+; Inputs:
 ;
 ; Registers altered:
 ;
 lcd_init:
-	; set the DDRB register to have pins B0-B7 as output
-	ldi	temp, $7f
-	out	DDRB, temp
-
-	; delay 40 ms
-	rcall	delay_40_ms
-
-	; write RW=>0, RS=>0, E=>0 DB[4..7]=>$02
-	ldi	temp, $02
-	out	PORTB, temp
-
-	; wait 4.1 ms
-	rcall	delay_4_1_ms
-
-	; write RW=>0, RS=>0, E=>0 DB[4..7]=>$02
-	ldi	temp, $02
-	out	PORTB, temp
-
-	; wait 100 us
-	rcall	delay_100_us
-
+	ldi	temp, $7f		; set the DDRB register to have
+	out	DDRB, temp		;   pins B0-B7 as output
+	rcall	delay_40_ms		; delay 40 ms
+	ldi	temp, $02		; set RW=>0, RS=>0, E=>0 DB[4..7]=>$02
+	out	PORTB, temp		;    set the pins by writing to IO PORT B
+	rcall	delay_4_1_ms		; wait 4.1 ms
+	ldi	temp, $02		; write RW=>0, RS=>0, E=>0 DB[4..7]=>$02
+	out	PORTB, temp		;    set the pins by writing to IO PORT B
+	rcall	delay_100_us		; wait 100 us
 	ret
 
 
-;================================
+;=============================================================================
 ; lcd_read_inst subroutine
 ;
-; synopsis
+; Synopsis:
 ;
-; inputs:
+; Inputs:
 ;
 ; Registers altered:
 ;
@@ -204,17 +255,24 @@ lcd_read_inst:
 	ret
 
 
-; pulse the ENABLE signal:
-;   Set ENABLE (PIN B5) high
-;   wait 500ns	
-;   wait one cycle (do a nop)
-;   read the 4 data bus pins PORTB[0..3]
+;============================================================================
+; lcd_pulse_e subroutine
+;
+; Synopsis:
+;	Pulse the ENABLE signal. The wriring has ENABLE connected to Pin B5.
+;	The technique used in this algorithm is based on the
+;	LiquidCrystal::pulseEnable function from the LiquidCrystal libary
+;	that is distributed with Arduino.
+;
+;	Set ENABLE (PIN B5) high
+;	Read the 4 data bus pins PORTB[0..3]
 ;   Set Enable low
+;
 lcd_pulse_e:
-	sbi	PORTB, 5
-	rcall	delay_500_ns
-	nop
-	in	r16, PORTB
-	andi	r16, $0f
-	cbi	PORTB, 5
+	cbi	PORTB, 5		; Set ENABLE low
+	rcall	delay_500_ns		; Wait 500ns	
+	sbi	PORTB, 5		; Set ENABLE high
+	rcall	delay_500_ns		; Wait 500ns (LCD library comments says minimum 450ns)
+	cbi	PORTB, 5		; Set ENABLE low
+	rcall	delay_40_us		; Wait 40us to settle (LCD libary comment says >37us)	
 	ret
