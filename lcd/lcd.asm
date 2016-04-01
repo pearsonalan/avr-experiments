@@ -226,31 +226,63 @@ lcd_init:
 	ldi	temp, $02		; write RW=>0, RS=>0, E=>0 DB[4..7]=>$02
 	out	PORTB, temp		;    set the pins by writing to IO PORT B
 	rcall	delay_100_us		; wait 100 us
+
+	rcall	lcd_wait_for_not_busy	; wait until the busy flag is off
+
 	ret
 
 
 ;=============================================================================
-; lcd_read_inst subroutine
+; lcd_wait_for_not_busy subroutine
 ;
 ; Synopsis:
+;	Poll the busy flag until we read that it is 0.
+;
+; Registers altered:
+;	temp (r16)
+;	r1
+
+lcd_wait_for_not_busy:
+	rcall	lcd_read_busy		; read the busy flag into R1
+	tst	r1			; see if r1 is 0
+	brne	lcd_wait_for_not_busy	; if not 0, then LCD is busy, and loop
+	ret
+
+
+;=============================================================================
+; lcd_read_busy subroutine
+;
+; Synopsis:
+;	Read one byte from the HD44780 instruction register.  According to the
+;	datasheet on page 9, when RW is 1 and RS is 0, after toggling Enable,
+;	the busy flag can be read on DB[7], and the address counter can be read
+;	on DB[0..6]. In the wiring for this circuit, only 4 pins are used so
+;	we can't read DB[0..3].  So this routine only gets and returns the busy
+;	flag on DB[7]
 ;
 ; Inputs:
 ;
-; Registers altered:
+; Output:
+;	r1 is set to 1 or 0 based on the busy flag
 ;
-lcd_read_inst:
-	; set RW high to indicate that we are reading
-	; set DB[4..7] low
-	; set RS low
-	ldi	temp, $40
-	out	PORTB, temp
+; Registers altered:
+;	temp (r16)
+;	r1
+;
+lcd_read_busy:
+	ldi	temp, $40		; set RW high to indicate that we are reading
+	out	PORTB, temp		; set DB[4..7] low
+					; set RS low
 
-	rcall	lcd_pulse_e
+	rcall	lcd_pulse_e		; toggle the enable flag.  this method includes some wait time
 
-	; set RW low
-	; set DB[4..7] high
-	ldi	temp, $0F
-	out	PORTB, temp
+	in	temp, PORTB		; now read the DB pins connected to PORTB into the temp reg
+	clr	r1			; clear the r1 register
+	bst	temp, 3			; copy bit 3 (the busy flag bit in DB[7]) into the T flag of the SREG
+	bld	r1, 0			; copy the bit from the T flag into bit 0 of r1
+
+	ldi	temp, $0F		; set RW low, RS low, ENABLE low, and DB[4..7] high
+	out	PORTB, temp	
 
 	ret
 
