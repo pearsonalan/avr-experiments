@@ -108,30 +108,23 @@ typedef struct hd44780_t
 	uint16_t flags;				// LCD flags ( HD44780_FLAG_*)
 } hd44780_t;
 
-void
-hd44780_init(
-		struct avr_t *avr,
+void hd44780_init(struct avr_t *avr,
 		struct hd44780_t * b,
 		int width,
 		int height );
-void
-hd44780_print(
-		struct hd44780_t *b);
 
-static inline int
-hd44780_set_flag(
-		hd44780_t *b, uint16_t bit, int val)
+void hd44780_print(struct hd44780_t *b);
+
+static inline int hd44780_set_flag(hd44780_t *b, uint16_t bit, int val)
 {
-	int old = b->flags &  (1 << bit);
+	int old = b->flags & (1 << bit);
 	b->flags = (b->flags & ~(1 << bit)) | (val ? (1 << bit) : 0);
 	return old != 0;
 }
 
-static inline int
-hd44780_get_flag(
-		hd44780_t *b, uint16_t bit)
+static inline int hd44780_get_flag(hd44780_t *b, uint16_t bit)
 {
-	return (b->flags &  (1 << bit)) != 0;
+	return (b->flags & (1 << bit)) != 0;
 }
 
 #endif 

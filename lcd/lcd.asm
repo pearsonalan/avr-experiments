@@ -102,6 +102,8 @@ reset:
 	ldi	r29, HIGH(RAMEND)
 	out	SPL, r28
 	out	SPH, r29
+
+	sei
 	
 	
 ;======================
@@ -136,8 +138,11 @@ end:	rjmp	end			; do nothing forever
 ;	can always disable global interrupts before invoking this method,
 ;	but do so at your own risk.
 ;
-; inputs:
+; Inputs:
 ;	R25:R24		- the number of loops to make
+;
+; Output:
+;	none
 ;
 ; Registers altered:
 ;	R25		- on exit, the register will be 0
@@ -213,24 +218,215 @@ delay_40_ms:
 ;	as described on Page 46 of the datasheet.
 ;
 ; Inputs:
+;	none
+;
+; Outputs:
+;	none
 ;
 ; Registers altered:
+;	r1
+;	r16
+;	r17
+;	r24
+;	r25
 ;
 lcd_init:
 	ldi	temp, $7f		; set the DDRB register to have
 	out	DDRB, temp		;   pins B0-B7 as output
+
+	; wait 40ms for power to stabilize after power-up	
 	rcall	delay_40_ms		; delay 40 ms
-	ldi	temp, $02		; set RW=>0, RS=>0, E=>0 DB[4..7]=>$02
+	
+	; send init command, wait 4.1ms
+	;   RS=0, RW=0, DB[7..4]=$02
+	ldi	temp, $03		; bits to set.
 	out	PORTB, temp		;    set the pins by writing to IO PORT B
+	rcall	lcd_pulse_e		; pulse the Enable flag
 	rcall	delay_4_1_ms		; wait 4.1 ms
-	ldi	temp, $02		; write RW=>0, RS=>0, E=>0 DB[4..7]=>$02
+
+	; send init command, wait 100 us
+	;   RS=0, RW=0, DB[7..4]=$02
+	ldi	temp, $03		; bits to set,
 	out	PORTB, temp		;    set the pins by writing to IO PORT B
+	rcall	lcd_pulse_e		; pulse the Enable flag
 	rcall	delay_100_us		; wait 100 us
 
-	rcall	lcd_wait_for_not_busy	; wait until the busy flag is off
+	; send init command, then wait for busy flag to go low
+	ldi	r17, $03		; put $03 in the input register
+	rcall	lcd_send_command	; send the command (toggle enable, and wait for not busy)
+
+	; Perform Function: SET 4-BIT MODE.
+	rcall	lcd_set_4bit
+	
+	; Perform Function: SET DISPLAY MODE
+	rcall	lcd_set_display_mode
+
+	; Perform Function: SET DISPLAY ON
+	rcall	lcd_set_display_on
+
+	; Perform Function: CLEAR DISPLAY
+	rcall	lcd_clear_display
+
+	; Perform Function: ENTRY MODE SET
+	rcall	lcd_entry_mode_set
+
+	
+	; pulsing the D4 pin is used to signal init done
+	rcall	pulse_d4
 
 	ret
 
+
+;=============================================================================
+; lcd_set_4bit subroutine
+;
+; Synopsis:
+;	Perform Function SET BIT MODE
+;	Sets the folling values on the pins
+;		RS=0, RW=0, DB[7..4]=$02
+;	Then Toggles Enable, and waits for Busy to go low again
+;
+; Input:	none
+;
+; Ouptut:	none
+;
+; Registers altered: r1, r16, r17, r24, r25
+;
+lcd_set_4bit:
+	; Perform FunctionSet 4 BIT MODE:
+	;   RS=0, RW=0, DB[7..4]=$02
+	ldi	r17, $02		; put $02 in the input register
+	jmp	lcd_send_command	; send the command (toggle enable, and wait for not busy)
+
+
+
+;=============================================================================
+; lcd_set_display_mode subroutine
+;
+; Synopsis:
+;	Perform Function SET DISPLAY MODE
+;	Sets the folling values on the pins:
+;		RS=0, RW=0, DB7=0 DB6=0, DB5=1, DB4=0
+;		RS=0, RW=0, DB7=N DB6=F, DB5=0, DB4=0
+;	N and F are selected according to Table 8 on Page 29 of the datasheet.
+;	For our 20x2 display, we use N=1, F=0
+;	After each of the above commands, enable is toggled and then busy must go low
+;
+; Input:	none
+;
+; Ouptut:	none
+;
+; Registers altered: r1, r16, r17, r24, r25
+;
+lcd_set_display_mode:
+	; Perform Function SET DISPLAY MODE:
+	;   RS=0, RW=0, DB[7..4]=$02
+	ldi	r17, $02		; put $02 in the input register
+	rcall	lcd_send_command	; send the command
+	ldi	r17, $08		; put $08 in the input register
+	jmp	lcd_send_command	; send the command
+
+
+lcd_set_display_on:
+	; Perform Function SET DISPLAY CONTORL (D=ON, C=OFF, B=OFF):
+	ldi	r17, $00		; put $00 in the input register
+	rcall	lcd_send_command	; send the command
+	ldi	r17, $0C		; put $0C in the input register
+	jmp	lcd_send_command	; send the command
+
+
+lcd_clear_display:
+	; Perform Function CLEAR DISPLAY:
+	ldi	r17, $00		; put $00 in the input register
+	rcall	lcd_send_command	; send the command
+	ldi	r17, $01		; put $08 in the input register
+	jmp	lcd_send_command	; send the command
+
+lcd_entry_mode_set:
+	; Perform Function ENTRY MODE SET:
+	ldi	r17, $00		; put $00 in the input register
+	rcall	lcd_send_command	; send the command
+	ldi	r17, $06		; put $06 in the input register
+	jmp	lcd_send_command	; send the command
+
+;=============================================================================
+; lcd_send_command subroutine
+;
+; Synopsis:
+;	Send an 8 bit command and wait for the BUSY FLAG to clear.
+;
+; Inputs:
+;	R17 - 8 bits to send as follows:
+;
+;	BIT:	7	6	5	4	3	2	1	0
+;	VALUE:	-	RW	-	RS	DB7	DB6	DB5	DB4
+;	
+; Outputs:
+;	none
+;
+; Registers altered:
+;	r1
+;	r16
+;	r24
+;	r25
+;
+lcd_send_command:
+	out	PORTB, r17		; set the pins by writing to IO PORT B
+	rcall	lcd_pulse_e		; pulse the Enable flag
+	jmp	lcd_wait_for_not_busy	; wait until the busy flag is off
+	
+
+
+;=============================================================================
+; lcd_send_nibble subroutine
+;
+; Synopsis:
+;	Send half of an 8 bit command. The 4 bits to send are the low nibble
+;	of R16.
+;
+; Inputs:
+;	R16 - low 4 bits contain the bits to send as follows:
+;
+;   Take the 4 bits of r16, and set a byte like:
+;	BIT:	7	6	5	4	3	2	1	0
+;	VALUE:	-	RW	-	RS	DB7	DB6	DB5	DB4
+;	
+; Outputs:
+;	none
+;
+; Registers altered:
+;	r1
+;	r16
+;	r24
+;	r25
+;
+lcd_send_nibble:
+	out	PORTB, r17		; set the pins by writing to IO PORT B
+	rcall	lcd_pulse_e		; pulse the Enable flag
+	jmp	lcd_wait_for_not_busy	; wait until the busy flag is off
+
+
+
+;=============================================================================
+; pulse_d4 subroutine
+;
+; Synopsis:
+;	Quickly pulse the PIN on D4 high then low.
+;
+; Registers altered:
+;	temp (r16)
+;
+pulse_d4:
+	ldi	temp, $10
+	out	PORTD, temp
+	nop
+	nop
+	ldi	temp, $00
+	out	PORTD, temp
+	nop
+	nop
+	ret
+	
 
 ;=============================================================================
 ; lcd_wait_for_not_busy subroutine
@@ -238,9 +434,18 @@ lcd_init:
 ; Synopsis:
 ;	Poll the busy flag until we read that it is 0.
 ;
+; Inputs:
+;	none
+;
+; Output:
+;	none
+;
 ; Registers altered:
-;	temp (r16)
 ;	r1
+;	r16 (temp)
+;	r24
+;	r25
+;
 
 lcd_wait_for_not_busy:
 	rcall	lcd_read_busy		; read the busy flag into R1
@@ -261,17 +466,20 @@ lcd_wait_for_not_busy:
 ;	flag on DB[7]
 ;
 ; Inputs:
+;	none
 ;
 ; Output:
 ;	r1 is set to 1 or 0 based on the busy flag
 ;
 ; Registers altered:
-;	temp (r16)
 ;	r1
+;	r16 (temp)
+;	r24
+;	r25
 ;
 lcd_read_busy:
 	ldi	temp, $40		; set RW high to indicate that we are reading
-	out	PORTB, temp		; set DB[4..7] low
+	out	PORTB, temp		; set DB[7..4] low
 					; set RS low
 
 	rcall	lcd_pulse_e		; toggle the enable flag.  this method includes some wait time
@@ -280,9 +488,6 @@ lcd_read_busy:
 	clr	r1			; clear the r1 register
 	bst	temp, 3			; copy bit 3 (the busy flag bit in DB[7]) into the T flag of the SREG
 	bld	r1, 0			; copy the bit from the T flag into bit 0 of r1
-
-	ldi	temp, $0F		; set RW low, RS low, ENABLE low, and DB[4..7] high
-	out	PORTB, temp	
 
 	ret
 
@@ -298,7 +503,17 @@ lcd_read_busy:
 ;
 ;	Set ENABLE (PIN B5) high
 ;	Read the 4 data bus pins PORTB[0..3]
-;   Set Enable low
+;       Set Enable low
+;
+; Inputs:
+;	none
+;
+; Outputs:
+;	none
+; 
+; Registers altered:
+;	r24
+;	r25
 ;
 lcd_pulse_e:
 	cbi	PORTB, 5		; Set ENABLE low

@@ -44,18 +44,14 @@ hd44780_print(
 }
 
 
-static void
-_hd44780_reset_cursor(
-		hd44780_t *b)
+static void _hd44780_reset_cursor(hd44780_t *b)
 {
 	b->cursor = 0;
 	hd44780_set_flag(b, HD44780_FLAG_DIRTY, 1);
 	avr_raise_irq(b->irq + IRQ_HD44780_ADDR, b->cursor);
 }
 
-static void
-_hd44780_clear_screen(
-		hd44780_t *b)
+static void _hd44780_clear_screen(hd44780_t *b)
 {
 	memset(b->vram, ' ', 80);
 	hd44780_set_flag(b, HD44780_FLAG_DIRTY, 1);
@@ -137,10 +133,12 @@ hd44780_write_command(
 	switch (top) {
 		// Set	DDRAM address
 		case 7:		// 1 ADD ADD ADD ADD ADD ADD ADD
+			printf("%s set DRAM address\n", __FUNCTION__);
 			b->cursor = b->datapins & 0x7f;
 			break;
 		// Set	CGRAM address
 		case 6:		// 0 1 ADD ADD ADD ADD ADD ADD ADD
+			printf("%s set CGRAM address\n", __FUNCTION__);
 			b->cursor = 64 + (b->datapins & 0x3f);
 			break;
 		// Function	set
@@ -149,6 +147,10 @@ hd44780_write_command(
 			hd44780_set_flag(b, HD44780_FLAG_D_L, b->datapins & 16);
 			hd44780_set_flag(b, HD44780_FLAG_N, b->datapins & 8);
 			hd44780_set_flag(b, HD44780_FLAG_F, b->datapins & 4);
+			printf("%s FUNCITON SET DL=%d N=%d F=%d\n", __FUNCTION__,
+				(b->datapins & 16) == 16,
+				(b->datapins & 8) == 8,
+				(b->datapins & 4) == 4);
 			if (!four && !hd44780_get_flag(b, HD44780_FLAG_D_L)) {
 				printf("%s activating 4 bits mode\n", __FUNCTION__);
 				hd44780_set_flag(b, HD44780_FLAG_LOWNIBBLE, 0);
@@ -156,11 +158,13 @@ hd44780_write_command(
 		}	break;
 		// Cursor display shift
 		case 4:		// 0 0 0 1 S/C R/L x x
+			printf("%s cursor display shift\n", __FUNCTION__);
 			hd44780_set_flag(b, HD44780_FLAG_S_C, b->datapins & 8);
 			hd44780_set_flag(b, HD44780_FLAG_R_L, b->datapins & 4);
 			break;
 		// Display on/off control
 		case 3:		// 0 0 0 0 1 D C B
+			printf("%s display on/off\n", __FUNCTION__);
 			hd44780_set_flag(b, HD44780_FLAG_D, b->datapins & 4);
 			hd44780_set_flag(b, HD44780_FLAG_C, b->datapins & 2);
 			hd44780_set_flag(b, HD44780_FLAG_B, b->datapins & 1);
@@ -168,16 +172,19 @@ hd44780_write_command(
 			break;
 		// Entry mode set
 		case 2:		// 0 0 0 0 0 1 I/D S
+			printf("%s entry mode set\n", __FUNCTION__);
 			hd44780_set_flag(b, HD44780_FLAG_I_D, b->datapins & 2);
 			hd44780_set_flag(b, HD44780_FLAG_S, b->datapins & 1);
 			break;
 		// Return home
 		case 1:		// 0 0 0 0 0 0 1 x
+			printf("%s return home\n", __FUNCTION__);
 			_hd44780_reset_cursor(b);
 			delay = 1520;
 			break;
 		// Clear display
 		case 0:		// 0 0 0 0 0 0 0 1
+			printf("%s clear screen\n", __FUNCTION__);
 			_hd44780_clear_screen(b);
 			break;
 	}
@@ -187,9 +194,7 @@ hd44780_write_command(
 /*
  * the E pin went low, and it's a write
  */
-static uint32_t
-hd44780_process_write(
-		hd44780_t *b )
+static uint32_t hd44780_process_write(hd44780_t *b)
 {
 	uint32_t delay = 0; // uS
 	int four = !hd44780_get_flag(b, HD44780_FLAG_D_L);
@@ -202,7 +207,11 @@ hd44780_process_write(
 		else
 			b->datapins = (b->datapins & 0xf) | ((b->pinstate >>  (IRQ_HD44780_D4-4)) & 0xf0);
 		write = comp;
+		printf("reading 4 bits of data. PINS=%08x, comp=%d\n", b->datapins, comp);
+
+		printf("flipping LOWNIBBLE flag.\n");
 		b->flags ^= (1 << HD44780_FLAG_LOWNIBBLE);
+		printf("Flags = %08X\n", b->flags);
 	} else {	// 8 bits
 		b->datapins = (b->pinstate >>  IRQ_HD44780_D0) & 0xff;
 		write++;
@@ -229,13 +238,16 @@ static uint32_t hd44780_process_read(hd44780_t *b)
 	int four = !hd44780_get_flag(b, HD44780_FLAG_D_L);
 	int comp = four && hd44780_get_flag(b, HD44780_FLAG_LOWNIBBLE);
 	int done = 0;	// has something on the datapin we want
-
+ 
+	printf("hd44780_process_read\n");
 	if (comp)
 	{
 		// ready the 4 final bits on the 'actual' lcd pins
 		b->readpins <<= 4;
 		done++;
+		printf("Flipping LOWNIBBLE flag in process_read\n");
 		b->flags ^= (1 << HD44780_FLAG_LOWNIBBLE);
+		printf("Flags = %08X\n", b->flags);
 	}
 
 	if (!done)
@@ -256,7 +268,8 @@ static uint32_t hd44780_process_read(hd44780_t *b)
 			int busy = hd44780_get_flag(b, HD44780_FLAG_BUSY);
 			b->readpins |= busy ? 0x80 : 0;
 
-		//	if (busy) printf("Good boy, guy's reading status byte\n");
+			// if (busy) printf("Good boy, guy's reading status byte\n");
+
 			// now that we're read the busy flag, clear it and clear
 			// the timer too
 			hd44780_set_flag(b, HD44780_FLAG_BUSY, 0);
@@ -267,7 +280,11 @@ static uint32_t hd44780_process_read(hd44780_t *b)
 
 		done++;
 		if (four)
+		{
+			printf("Hmmm. it looks like we are setting the LOWNIBBLE flag now\n");
 			b->flags |= (1 << HD44780_FLAG_LOWNIBBLE); // for next read
+			printf("Flags = %08X\n", b->flags);
+		}
 	}
 
 	// now send the prepared output pins to send as IRQs

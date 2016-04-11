@@ -39,13 +39,16 @@ void keyCB(unsigned char key, int x, int y)
 {
 	switch (key) {
 	case 'q':
+		printf("Quit notification in keyCB\n");
 		avr_vcd_stop(&vcd_file);
 		exit(0);
 		break;
+
 	case 'r':
 		printf("Starting VCD trace; press 's' to stop\n");
 		avr_vcd_start(&vcd_file);
 		break;
+
 	case 's':
 		printf("Stopping VCD trace\n");
 		avr_vcd_stop(&vcd_file);
@@ -115,7 +118,7 @@ static void uart_output_cb(struct avr_irq_t *irq, uint32_t value, void *param)
 
 void sig_int(int sign)
 {
-	printf("signal caught, simavr terminating\n");
+	printf("INT signal caught, simavr terminating\n");
 	if (avr)
 		avr_terminate(avr);
 	exit(0);
@@ -160,13 +163,6 @@ void show_ports(avr_t *avr)
 	}
 }
 
-avr_cycle_count_t termination_timer(struct avr_t *avr, avr_cycle_count_t when, void *param)
-{
-	printf("*** Termination timer called at %ld (avr cycle %ld) ***\n", (long) when, (long) avr->cycle);
-	avr->state = cpu_Done;
-	return 0;
-}
-
 static void * avr_run_thread(void * ignore)
 {
 	int state;
@@ -186,7 +182,7 @@ static void * avr_run_thread(void * ignore)
 		}
 	}
 
-	printf("*** Terminating ***\n");
+	printf("*** Terminating avr thread ***\n");
 	avr_vcd_stop(&vcd_file);
 	avr_terminate(avr);
 	return NULL;
@@ -196,7 +192,7 @@ int main(int argc, char *argv[])
 {
 	int gdb = 0;
 	ihex_chunk_p chunk = NULL;
-	int ci, cnt;
+	int i, ci, cnt;
 	const char *mmcu = "atmega328p";
 	const char *fname, *progname;
 	int window;
@@ -254,19 +250,63 @@ int main(int argc, char *argv[])
 
 	hd44780_init(avr, &hd44780, 20, 2);
 
+	/* Connect Data Lines to Port B, 0-3 */
+	for (i = 0; i < 4; i++) {
+		avr_irq_t * iavr = avr_io_getirq(avr, AVR_IOCTL_IOPORT_GETIRQ('B'), i);
+		avr_irq_t * ilcd = hd44780.irq + IRQ_HD44780_D4 + i;
+
+		/* These are bidirectional too:
+		 *  connect AVR -> LCD
+		 *  connect LCD -> AVR
+		 */
+		avr_connect_irq(iavr, ilcd);
+		avr_connect_irq(ilcd, iavr);
+	}
+	avr_connect_irq(
+			avr_io_getirq(avr, AVR_IOCTL_IOPORT_GETIRQ('B'), 4),
+			hd44780.irq + IRQ_HD44780_RS);
+	avr_connect_irq(
+			avr_io_getirq(avr, AVR_IOCTL_IOPORT_GETIRQ('B'), 5),
+			hd44780.irq + IRQ_HD44780_E);
+	avr_connect_irq(
+			avr_io_getirq(avr, AVR_IOCTL_IOPORT_GETIRQ('B'), 6),
+			hd44780.irq + IRQ_HD44780_RW);
+
 	/*	VCD file initialization */
 	printf("*** Initializing VCD Output ***\n");
-	avr_vcd_init(avr, "wave.vcd", &vcd_file, 10000 /* usec */);
-	avr_vcd_add_signal(&vcd_file, avr_io_getirq(avr, AVR_IOCTL_IOPORT_GETIRQ('B'), 0), 1, "B0" );
+	avr_vcd_init(avr, "wave.vcd", &vcd_file, 10 /* usec */);
+
 	avr_vcd_add_signal(&vcd_file, avr_io_getirq(avr, AVR_IOCTL_IOPORT_GETIRQ('D'), 4), 1, "D4" );
+	avr_vcd_add_signal(&vcd_file,
+			avr_io_getirq(avr, AVR_IOCTL_IOPORT_GETIRQ('B'), IOPORT_IRQ_PIN_ALL),
+			4 /* bits */, "D4-D7");
+	avr_vcd_add_signal(&vcd_file,
+			avr_io_getirq(avr, AVR_IOCTL_IOPORT_GETIRQ('B'), 4),
+			1 /* bits */, "RS");
+	avr_vcd_add_signal(&vcd_file,
+			avr_io_getirq(avr, AVR_IOCTL_IOPORT_GETIRQ('B'), 5),
+			1 /* bits */, "E");
+	avr_vcd_add_signal(&vcd_file,
+			avr_io_getirq(avr, AVR_IOCTL_IOPORT_GETIRQ('B'), 6),
+			1 /* bits */, "RW");
+	avr_vcd_add_signal(&vcd_file,
+			hd44780.irq + IRQ_HD44780_BUSY,
+			1 /* bits */, "LCD_BUSY");
+	avr_vcd_add_signal(&vcd_file,
+			hd44780.irq + IRQ_HD44780_ADDR,
+			7 /* bits */, "LCD_ADDR");
+	avr_vcd_add_signal(&vcd_file,
+			hd44780.irq + IRQ_HD44780_DATA_IN,
+			8 /* bits */, "LCD_DATA_IN");
+	avr_vcd_add_signal(&vcd_file,
+			hd44780.irq + IRQ_HD44780_DATA_OUT,
+			8 /* bits */, "LCD_DATA_OUT");
+
 	avr_vcd_start(&vcd_file);
 
 	/* set up interrupt handlers */
 	signal(SIGINT, sig_int);
 	signal(SIGTERM, sig_int);
-
-	/* register a timer to terminate the loop */
-	avr_cycle_timer_register_usec(avr, 1000000, termination_timer, NULL);
 
 	/* show port info */
 	show_ports(avr);
@@ -278,16 +318,17 @@ int main(int argc, char *argv[])
 	int pixsize = 3;
 
 	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
-	glutInitWindowSize(w * pixsize, h * pixsize);		/* width=400pixels height=500pixels */
+	glutInitWindowSize(w * pixsize, h * pixsize);
 	window = glutCreateWindow("Press 'q' to quit");	/* create window */
 
 	initGL(w * pixsize, h * pixsize);
-	printf("*** Entering main loop ***\n");
 
 	pthread_t run;
 	pthread_create(&run, NULL, avr_run_thread, NULL);
 
+	printf("*** Entering main GL loop ***\n");
 	glutMainLoop();
+	printf("*** Exiting main GL loop ***\n");
 
 	return 0;
 }

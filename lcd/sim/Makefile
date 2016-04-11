@@ -12,6 +12,7 @@ endif
 # OpenGL settings
 ifeq ($(ARCH),Darwin)
   OPENGL_LDFLAGS = -framework GLUT -framework OpenGL
+  OPENGL_CFLAGS = -Wno-deprecated-declarations
 else ifeq ($(ARCH), Linux)
   OPENGL_LDFLAGS = -lglut ${shell pkg-config --libs glu}
   OPENGL_CFLAGS	 = ${shell pkg-config --cflags glu}
@@ -24,7 +25,7 @@ else ifeq ($(ARCH), Linux)
   LDFLAGS = -lpthread -lsimavr -lelf
 endif
 
-CFLAGS	+= $(OPENGL_LDFLAGS)
+CFLAGS	+= $(OPENGL_CFLAGS)
 LDFLAGS += $(OPENGL_LDFLAGS)
 
 PROG=avr-sim
