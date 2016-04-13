@@ -354,13 +354,13 @@ lcd_entry_mode_set:
 ;
 ; Synopsis:
 ;	Send an 8 bit command and wait for the BUSY FLAG to clear.
+;	The high nibble is sent first, then the low nibble second.  Each
+;	send of a nibble requires the EN flag to be toggled, then we can
+;	wait for the not busy signal
 ;
 ; Inputs:
-;	R17 - 8 bits to send as follows:
+;	R17 - 8 bits command to send
 ;
-;	BIT:	7	6	5	4	3	2	1	0
-;	VALUE:	-	RW	-	RS	DB7	DB6	DB5	DB4
-;	
 ; Outputs:
 ;	none
 ;
@@ -371,26 +371,31 @@ lcd_entry_mode_set:
 ;	r25
 ;
 lcd_send_command:
-	out	PORTB, r17		; set the pins by writing to IO PORT B
-	rcall	lcd_pulse_e		; pulse the Enable flag
+	mov	r16, r17		; copy the 8 bits to send to r16
+	swap	r16			; swap nibbles to get the high 4 bits
+					; into the low nibble
+	rcall	lcd_send_command_nibble	; send the nibble containing the high 4 bits and pulse the Enable flag
+	mov	r16, r17
+	rcall	lcd_send_command_nibble	; send the nibble containing the low 4 bits and pulse the Enable flag
 	jmp	lcd_wait_for_not_busy	; wait until the busy flag is off
 	
 
 
 ;=============================================================================
-; lcd_send_nibble subroutine
+; lcd_send_command_nibble subroutine
 ;
 ; Synopsis:
 ;	Send half of an 8 bit command. The 4 bits to send are the low nibble
-;	of R16.
+;	of R16. When sent in PORTB the low 4 bits correspond to DB[7..4]. The
+;	upper nibble maps to the pins [*, RW, EN, RS], so set the upper nibble
+;	to zeroes to enable writing a command
 ;
-; Inputs:
-;	R16 - low 4 bits contain the bits to send as follows:
-;
-;   Take the 4 bits of r16, and set a byte like:
 ;	BIT:	7	6	5	4	3	2	1	0
-;	VALUE:	-	RW	-	RS	DB7	DB6	DB5	DB4
+;	VALUE:	-	RW	EN	RS	DB7	DB6	DB5	DB4
 ;	
+; Inputs:
+;	R16 - low 4 bits contain the bits to send
+;
 ; Outputs:
 ;	none
 ;
@@ -400,10 +405,11 @@ lcd_send_command:
 ;	r24
 ;	r25
 ;
-lcd_send_nibble:
-	out	PORTB, r17		; set the pins by writing to IO PORT B
+lcd_send_command_nibble:
+	andi	r16, $0f		; clear high nibble
+	out	PORTB, r16		; set the pins by writing to IO PORT B
 	rcall	lcd_pulse_e		; pulse the Enable flag
-	jmp	lcd_wait_for_not_busy	; wait until the busy flag is off
+	ret
 
 
 
