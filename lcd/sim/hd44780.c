@@ -281,7 +281,7 @@ static uint32_t hd44780_process_read(hd44780_t *b)
 		done++;
 		if (four)
 		{
-			printf("Hmmm. it looks like we are setting the LOWNIBBLE flag now\n");
+			printf("setting the LOWNIBBLE flag in process_read\n");
 			b->flags |= (1 << HD44780_FLAG_LOWNIBBLE); // for next read
 			printf("Flags = %08X\n", b->flags);
 		}

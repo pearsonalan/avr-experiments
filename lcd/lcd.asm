@@ -238,28 +238,30 @@ lcd_init:
 	rcall	delay_40_ms		; delay 40 ms
 	
 	; send init command, wait 4.1ms
-	;   RS=0, RW=0, DB[7..4]=$02
+	;   RS=0, RW=0, DB[7..4]=b0011
 	ldi	temp, $03		; bits to set.
 	out	PORTB, temp		;    set the pins by writing to IO PORT B
 	rcall	lcd_pulse_e		; pulse the Enable flag
 	rcall	delay_4_1_ms		; wait 4.1 ms
 
 	; send init command, wait 100 us
-	;   RS=0, RW=0, DB[7..4]=$02
+	;   RS=0, RW=0, DB[7..4]=b0011
 	ldi	temp, $03		; bits to set,
 	out	PORTB, temp		;    set the pins by writing to IO PORT B
 	rcall	lcd_pulse_e		; pulse the Enable flag
 	rcall	delay_100_us		; wait 100 us
 
 	; send init command, then wait for busy flag to go low
-	ldi	r17, $03		; put $03 in the input register
-	rcall	lcd_send_command	; send the command (toggle enable, and wait for not busy)
+	ldi	temp, $03		; bits to set,
+	out	PORTB, temp		;    set the pins by writing to IO PORT B
+	rcall	lcd_pulse_e		; pulse the Enable flag
+	rcall	lcd_wait_for_not_busy	; wait until the busy flag is off
 
-	; Perform Function: SET 4-BIT MODE.
+	; Perform SET 4-BIT MODE.
 	rcall	lcd_set_4bit
 	
-	; Perform Function: SET DISPLAY MODE
-	rcall	lcd_set_display_mode
+	; Perform FUNCTION SET (Sets DL, N and F) values
+	rcall	lcd_function_set
 
 	; Perform Function: SET DISPLAY ON
 	rcall	lcd_set_display_on
@@ -290,24 +292,26 @@ lcd_init:
 ;
 ; Ouptut:	none
 ;
-; Registers altered: r1, r16, r17, r24, r25
+; Registers altered: r1, r16, r24, r25
 ;
 lcd_set_4bit:
 	; Perform FunctionSet 4 BIT MODE:
 	;   RS=0, RW=0, DB[7..4]=$02
-	ldi	r17, $02		; put $02 in the input register
-	jmp	lcd_send_command	; send the command (toggle enable, and wait for not busy)
+	ldi	temp, $02		; put $02 in the input register
+	out	PORTB, temp		;    set the pins by writing to IO PORT B
+	rcall	lcd_pulse_e		; pulse the Enable flag
+	jmp	lcd_wait_for_not_busy	; wait until the busy flag is off
 
 
 
 ;=============================================================================
-; lcd_set_display_mode subroutine
+; lcd_function_set subroutine
 ;
 ; Synopsis:
-;	Perform Function SET DISPLAY MODE
+;	Perform FUNCTION SET
 ;	Sets the folling values on the pins:
-;		RS=0, RW=0, DB7=0 DB6=0, DB5=1, DB4=0
-;		RS=0, RW=0, DB7=N DB6=F, DB5=0, DB4=0
+;		DB7=0, DB6=0, DB5=1, DB4=DL, DB3=N DB2=F, DB1=0, DB0=0
+;	DL is 0 to indicate 4 bit mode.
 ;	N and F are selected according to Table 8 on Page 29 of the datasheet.
 ;	For our 20x2 display, we use N=1, F=0
 ;	After each of the above commands, enable is toggled and then busy must go low
@@ -318,36 +322,29 @@ lcd_set_4bit:
 ;
 ; Registers altered: r1, r16, r17, r24, r25
 ;
-lcd_set_display_mode:
+lcd_function_set:
 	; Perform Function SET DISPLAY MODE:
-	;   RS=0, RW=0, DB[7..4]=$02
-	ldi	r17, $02		; put $02 in the input register
-	rcall	lcd_send_command	; send the command
-	ldi	r17, $08		; put $08 in the input register
+	;   RS=0, RW=0, DB[7..4]=00101000b
+	ldi	r17, $28		; put $28 in the input register
 	jmp	lcd_send_command	; send the command
 
 
 lcd_set_display_on:
 	; Perform Function SET DISPLAY CONTORL (D=ON, C=OFF, B=OFF):
-	ldi	r17, $00		; put $00 in the input register
-	rcall	lcd_send_command	; send the command
 	ldi	r17, $0C		; put $0C in the input register
 	jmp	lcd_send_command	; send the command
 
 
 lcd_clear_display:
 	; Perform Function CLEAR DISPLAY:
-	ldi	r17, $00		; put $00 in the input register
-	rcall	lcd_send_command	; send the command
-	ldi	r17, $01		; put $08 in the input register
+	ldi	r17, $01		; put $01 in the input register
 	jmp	lcd_send_command	; send the command
 
 lcd_entry_mode_set:
 	; Perform Function ENTRY MODE SET:
-	ldi	r17, $00		; put $00 in the input register
-	rcall	lcd_send_command	; send the command
 	ldi	r17, $06		; put $06 in the input register
 	jmp	lcd_send_command	; send the command
+
 
 ;=============================================================================
 ; lcd_send_command subroutine
@@ -372,10 +369,9 @@ lcd_entry_mode_set:
 ;
 lcd_send_command:
 	mov	r16, r17		; copy the 8 bits to send to r16
-	swap	r16			; swap nibbles to get the high 4 bits
-					; into the low nibble
+	swap	r16			; swap nibbles to get the high 4 bits into the low nibble
 	rcall	lcd_send_command_nibble	; send the nibble containing the high 4 bits and pulse the Enable flag
-	mov	r16, r17
+	mov	r16, r17		; copy the bits to send to r16. now we send the low 4 bits
 	rcall	lcd_send_command_nibble	; send the nibble containing the low 4 bits and pulse the Enable flag
 	jmp	lcd_wait_for_not_busy	; wait until the busy flag is off
 	
@@ -387,7 +383,7 @@ lcd_send_command:
 ; Synopsis:
 ;	Send half of an 8 bit command. The 4 bits to send are the low nibble
 ;	of R16. When sent in PORTB the low 4 bits correspond to DB[7..4]. The
-;	upper nibble maps to the pins [*, RW, EN, RS], so set the upper nibble
+;	upper nibble maps to the pins [-, RW, EN, RS], so set the upper nibble
 ;	to zeroes to enable writing a command
 ;
 ;	BIT:	7	6	5	4	3	2	1	0
@@ -406,10 +402,10 @@ lcd_send_command:
 ;	r25
 ;
 lcd_send_command_nibble:
-	andi	r16, $0f		; clear high nibble
+	andi	r16, $0f		; clear high nibble.  This will also set RW, EN and RS
+					;    low in addition to the 4 data pins to send
 	out	PORTB, r16		; set the pins by writing to IO PORT B
-	rcall	lcd_pulse_e		; pulse the Enable flag
-	ret
+	jmp	lcd_pulse_e		; pulse the Enable flag
 
 
 
