@@ -27,9 +27,25 @@
 
 #include "hd44780.h"
 
-void
-hd44780_print(
-		hd44780_t *b)
+void print_flags(hd44780_t *b)
+{  
+	printf("Flags: F=%d N=%d DL=%d RL=%d SC=%d B=%d C=%d D=%d S=%d ID=%d LOW=%d BUSY=%d RE=%d\n",
+		(b->flags & (1<<HD44780_FLAG_F)) != 0,
+		(b->flags & (1<<HD44780_FLAG_N)) != 0,
+		(b->flags & (1<<HD44780_FLAG_D_L)) != 0,
+		(b->flags & (1<<HD44780_FLAG_R_L)) != 0,
+		(b->flags & (1<<HD44780_FLAG_S_C)) != 0,
+		(b->flags & (1<<HD44780_FLAG_B)) != 0,
+		(b->flags & (1<<HD44780_FLAG_C)) != 0,
+		(b->flags & (1<<HD44780_FLAG_D)) != 0,
+		(b->flags & (1<<HD44780_FLAG_S)) != 0,
+		(b->flags & (1<<HD44780_FLAG_I_D)) != 0,
+		(b->flags & (1<<HD44780_FLAG_LOWNIBBLE)) != 0,
+		(b->flags & (1<<HD44780_FLAG_BUSY)) != 0,
+		(b->flags & (1<<HD44780_FLAG_REENTRANT)) != 0);
+}
+
+void hd44780_print(hd44780_t *b)
 {
 	int i;
 
@@ -147,7 +163,7 @@ hd44780_write_command(
 			hd44780_set_flag(b, HD44780_FLAG_D_L, b->datapins & 16);
 			hd44780_set_flag(b, HD44780_FLAG_N, b->datapins & 8);
 			hd44780_set_flag(b, HD44780_FLAG_F, b->datapins & 4);
-			printf("%s FUNCITON SET DL=%d N=%d F=%d\n", __FUNCTION__,
+			printf("%s FUNCTION SET DL=%d N=%d F=%d\n", __FUNCTION__,
 				(b->datapins & 16) == 16,
 				(b->datapins & 8) == 8,
 				(b->datapins & 4) == 4);
@@ -211,7 +227,7 @@ static uint32_t hd44780_process_write(hd44780_t *b)
 
 		printf("flipping LOWNIBBLE flag.\n");
 		b->flags ^= (1 << HD44780_FLAG_LOWNIBBLE);
-		printf("Flags = %08X\n", b->flags);
+		print_flags(b);
 	} else {	// 8 bits
 		b->datapins = (b->pinstate >>  IRQ_HD44780_D0) & 0xff;
 		write++;
@@ -239,7 +255,7 @@ static uint32_t hd44780_process_read(hd44780_t *b)
 	int comp = four && hd44780_get_flag(b, HD44780_FLAG_LOWNIBBLE);
 	int done = 0;	// has something on the datapin we want
  
-	printf("hd44780_process_read\n");
+	printf("hd44780_process_read. 4bit=%d, comp=%d\n", four, comp);
 	if (comp)
 	{
 		// ready the 4 final bits on the 'actual' lcd pins
@@ -247,7 +263,7 @@ static uint32_t hd44780_process_read(hd44780_t *b)
 		done++;
 		printf("Flipping LOWNIBBLE flag in process_read\n");
 		b->flags ^= (1 << HD44780_FLAG_LOWNIBBLE);
-		printf("Flags = %08X\n", b->flags);
+		print_flags(b);
 	}
 
 	if (!done)
@@ -283,7 +299,7 @@ static uint32_t hd44780_process_read(hd44780_t *b)
 		{
 			printf("setting the LOWNIBBLE flag in process_read\n");
 			b->flags |= (1 << HD44780_FLAG_LOWNIBBLE); // for next read
-			printf("Flags = %08X\n", b->flags);
+			print_flags(b);
 		}
 	}
 

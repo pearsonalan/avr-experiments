@@ -112,6 +112,17 @@ reset:
 main:
 	rcall	lcd_init
 
+	ldi	r17, $48		; 'H'
+	rcall	lcd_write_data
+	ldi	r17, $65		; 'e'
+	rcall	lcd_write_data
+	ldi	r17, $6c		; 'l'
+	rcall	lcd_write_data
+	ldi	r17, $6c		; 'l'
+	rcall	lcd_write_data
+	ldi	r17, $6f		; 'o'
+	rcall	lcd_write_data
+
 	;; infinite loop at the end to keep the PC from falling off the end of the world
 end:	rjmp	end			; do nothing forever
 
@@ -329,17 +340,51 @@ lcd_function_set:
 	jmp	lcd_send_command	; send the command
 
 
+;=============================================================================
+; lcd_set_display_on subroutine
+;
+; Synopsis:
+;
+; Input:	none
+;
+; Ouptut:	none
+;
+; Registers altered: r1, r16, r17, r24, r25
+;
 lcd_set_display_on:
 	; Perform Function SET DISPLAY CONTORL (D=ON, C=OFF, B=OFF):
 	ldi	r17, $0C		; put $0C in the input register
 	jmp	lcd_send_command	; send the command
 
 
+;=============================================================================
+; lcd_clear_display subroutine
+;
+; Synopsis:
+;
+; Input:	none
+;
+; Ouptut:	none
+;
+; Registers altered: r1, r16, r17, r24, r25
+;
 lcd_clear_display:
 	; Perform Function CLEAR DISPLAY:
 	ldi	r17, $01		; put $01 in the input register
 	jmp	lcd_send_command	; send the command
 
+
+;=============================================================================
+; lcd_entry_mode_set subroutine
+;
+; Synopsis:
+;
+; Input:	none
+;
+; Ouptut:	none
+;
+; Registers altered: r1, r16, r17, r24, r25
+;
 lcd_entry_mode_set:
 	; Perform Function ENTRY MODE SET:
 	ldi	r17, $06		; put $06 in the input register
@@ -396,7 +441,6 @@ lcd_send_command:
 ;	none
 ;
 ; Registers altered:
-;	r1
 ;	r16
 ;	r24
 ;	r25
@@ -407,6 +451,44 @@ lcd_send_command_nibble:
 	out	PORTB, r16		; set the pins by writing to IO PORT B
 	jmp	lcd_pulse_e		; pulse the Enable flag
 
+
+
+;=============================================================================
+; lcd_write_data
+;
+; Synopsis:
+;	Write data to CGRAM or DDRAM depending on wheterh the last set address
+;	command was the set CGRAM address command or set DDRAM address command
+;	
+; Inputs:
+;	R17 - 8 bit value to write at the current address
+;
+; Outputs:
+;	none
+;
+; Registers altered:
+;	r1
+;	r16
+;	r17
+;	r24
+;	r25
+;
+
+lcd_write_data:
+	mov	r16, r17		; copy the 8 bits to send to r16
+	swap	r16			; swap nibbles to get the high 4 bits into the low nibble
+	andi	r16, $0f		; clear high nibble.
+	ori	r16, $10		; turn RS on (to set writing to RAM), turn RW off (to indicate writing)
+	out	PORTB, r16		; set the pins by writing to IO PORT B
+	rcall	lcd_pulse_e		; pulse the Enable flag
+
+	mov	r16, r17		; copy the bits to send to r16. now we send the low 4 bits
+	andi	r16, $0f		; clear high nibble.
+	ori	r16, $10		; turn RS on (to set writing to RAM), turn RW off (to indicate writing)
+	out	PORTB, r16		; set the pins by writing to IO PORT B
+	rcall	lcd_pulse_e		; pulse the Enable flag
+
+	jmp	lcd_wait_for_not_busy	; wait until the busy flag has cleared
 
 
 ;=============================================================================
@@ -491,6 +573,10 @@ lcd_read_busy:
 	bst	temp, 3			; copy bit 3 (the busy flag bit in DB[7]) into the T flag of the SREG
 	bld	r1, 0			; copy the bit from the T flag into bit 0 of r1
 
+;	ldi	temp, $40
+;	out	PORTB, temp
+;	rcall	lcd_pulse_e		; toggle the enable flag.  this method includes some wait time
+
 	ret
 
 
@@ -523,5 +609,5 @@ lcd_pulse_e:
 	sbi	PORTB, 5		; Set ENABLE high
 	rcall	delay_500_ns		; Wait 500ns (LCD library comments says minimum 450ns)
 	cbi	PORTB, 5		; Set ENABLE low
-	rcall	delay_40_us		; Wait 40us to settle (LCD libary comment says >37us)	
+	;rcall	delay_40_us		; Wait 40us to settle (LCD libary comment says >37us)	
 	ret
