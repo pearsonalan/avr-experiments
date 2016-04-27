@@ -103,6 +103,9 @@ reset:
 	out	SPL, r28
 	out	SPH, r29
 
+	ldi	temp, (1<<DDD4)		; set the pin D4 to output
+	out	DDRD, temp
+
 	sei
 	
 	
@@ -112,14 +115,26 @@ reset:
 main:
 	rcall	lcd_init
 
+	ldi	r17, $00
+	rcall	lcd_set_ddram_address
 	ldi	r17, $48		; 'H'
 	rcall	lcd_write_data
+
+	rjmp	end
+
+	ldi	r17, $01
+	rcall	lcd_set_ddram_address
 	ldi	r17, $65		; 'e'
 	rcall	lcd_write_data
+
+	ldi	r17, $02
+	rcall	lcd_set_ddram_address
 	ldi	r17, $6c		; 'l'
 	rcall	lcd_write_data
+
 	ldi	r17, $6c		; 'l'
 	rcall	lcd_write_data
+
 	ldi	r17, $6f		; 'o'
 	rcall	lcd_write_data
 
@@ -248,12 +263,16 @@ lcd_init:
 	; wait 40ms for power to stabilize after power-up	
 	rcall	delay_40_ms		; delay 40 ms
 	
+	rcall	pulse_d4			; pulse D4 pin after each step
+
 	; send init command, wait 4.1ms
 	;   RS=0, RW=0, DB[7..4]=b0011
 	ldi	temp, $03		; bits to set.
 	out	PORTB, temp		;    set the pins by writing to IO PORT B
 	rcall	lcd_pulse_e		; pulse the Enable flag
 	rcall	delay_4_1_ms		; wait 4.1 ms
+
+	rcall	pulse_d4			; pulse D4 pin after each step
 
 	; send init command, wait 100 us
 	;   RS=0, RW=0, DB[7..4]=b0011
@@ -262,30 +281,40 @@ lcd_init:
 	rcall	lcd_pulse_e		; pulse the Enable flag
 	rcall	delay_100_us		; wait 100 us
 
+	rcall	pulse_d4			; pulse D4 pin after each step
+
 	; send init command, then wait for busy flag to go low
 	ldi	temp, $03		; bits to set,
 	out	PORTB, temp		;    set the pins by writing to IO PORT B
 	rcall	lcd_pulse_e		; pulse the Enable flag
-	rcall	lcd_wait_for_not_busy	; wait until the busy flag is off
+	rcall	delay_100_us		; wait 100 us
+
+	rcall	pulse_d4			; pulse D4 pin after each step
 
 	; Perform SET 4-BIT MODE.
 	rcall	lcd_set_4bit
 	
+	rcall	pulse_d4			; pulse D4 pin after each step
+
 	; Perform FUNCTION SET (Sets DL, N and F) values
 	rcall	lcd_function_set
+
+	rcall	pulse_d4			; pulse D4 pin after each step
 
 	; Perform Function: SET DISPLAY ON
 	rcall	lcd_set_display_on
 
+	rcall	pulse_d4			; pulse D4 pin after each step
+
 	; Perform Function: CLEAR DISPLAY
 	rcall	lcd_clear_display
 
+	rcall	pulse_d4			; pulse D4 pin after each step
+
 	; Perform Function: ENTRY MODE SET
 	rcall	lcd_entry_mode_set
-
 	
-	; pulsing the D4 pin is used to signal init done
-	rcall	pulse_d4
+	rcall	pulse_d4			; pulse D4 pin after each step
 
 	ret
 
@@ -390,6 +419,30 @@ lcd_entry_mode_set:
 	ldi	r17, $06		; put $06 in the input register
 	jmp	lcd_send_command	; send the command
 
+
+;=============================================================================
+; lcd_set_ddram_address subroutine
+;
+; Synopsis:
+;	Set the DDRAM address for the next read or write operation.  This also
+;	sets up the LCD that the next read/write is going to be from display
+;	data RAM (DDRAM).
+;
+; Input:
+;	r17 - DDRAM address to set in lower 7 bits (high bit is unused)
+;
+; Registers altered:
+;	r1
+;	r16
+;	r17	
+;	r24
+;	r25
+;
+lcd_set_ddram_address:
+	; set the high bit of r17
+	ori	r17, $80
+	jmp	lcd_send_command
+	
 
 ;=============================================================================
 ; lcd_send_command subroutine
@@ -573,9 +626,9 @@ lcd_read_busy:
 	bst	temp, 3			; copy bit 3 (the busy flag bit in DB[7]) into the T flag of the SREG
 	bld	r1, 0			; copy the bit from the T flag into bit 0 of r1
 
-;	ldi	temp, $40
-;	out	PORTB, temp
-;	rcall	lcd_pulse_e		; toggle the enable flag.  this method includes some wait time
+	ldi	temp, $40
+	out	PORTB, temp
+	rcall	lcd_pulse_e		; toggle the enable flag.  this method includes some wait time
 
 	ret
 
@@ -609,5 +662,6 @@ lcd_pulse_e:
 	sbi	PORTB, 5		; Set ENABLE high
 	rcall	delay_500_ns		; Wait 500ns (LCD library comments says minimum 450ns)
 	cbi	PORTB, 5		; Set ENABLE low
-	;rcall	delay_40_us		; Wait 40us to settle (LCD libary comment says >37us)	
+	rcall	delay_40_us		; Wait 40us to settle (LCD libary comment says >37us)	
 	ret
+

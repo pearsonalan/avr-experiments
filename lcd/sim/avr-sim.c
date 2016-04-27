@@ -188,6 +188,15 @@ static void * avr_run_thread(void * ignore)
 	return NULL;
 }
 
+void pin_changed_hook(struct avr_irq_t *irq, uint32_t value, void *param)
+{
+	if (value == 1)
+	{
+		/* if the pin was set high, use that as a signal to make a mark in the log */
+		printf("========== Pin change @%ld: %s => %d ==========\n", (long) avr->cycle, irq->name, value);
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	int gdb = 0;
@@ -248,6 +257,7 @@ int main(int argc, char *argv[])
 		avr_gdb_init(avr);
 	}
 
+	printf("*** Initializing the LCD Display ***\n");
 	hd44780_init(avr, &hd44780, 20, 2);
 
 	/* Connect Data Lines to Port B, 0-3 */
@@ -271,6 +281,9 @@ int main(int argc, char *argv[])
 	avr_connect_irq(
 			avr_io_getirq(avr, AVR_IOCTL_IOPORT_GETIRQ('B'), 6),
 			hd44780.irq + IRQ_HD44780_RW);
+
+	/* IRQ callback hooks */
+	avr_irq_register_notify(avr_io_getirq(avr, AVR_IOCTL_IOPORT_GETIRQ('D'), 4), pin_changed_hook, NULL); 
 
 	/*	VCD file initialization */
 	printf("*** Initializing VCD Output ***\n");

@@ -101,7 +101,7 @@ typedef struct hd44780_t
 	uint8_t  vram[80 + 64];
 
 	uint16_t pinstate;			// 'actual' LCd data pins (IRQ bit field)
-	// uint16_t oldstate;			/// previous pins
+	uint16_t oldstate;			// previous pins
 	uint8_t	 datapins;			// composite of 4 high bits, or 8 bits
 	uint8_t  readpins;
 

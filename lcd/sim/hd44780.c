@@ -81,10 +81,7 @@ static void _hd44780_clear_screen(hd44780_t *b)
  * without the AVR firmware 'reading' the status byte. It
  * automatically clears the BUSY flag for the next command
  */
-static avr_cycle_count_t
-_hd44780_busy_timer(
-		struct avr_t * avr,
-        avr_cycle_count_t when, void * param)
+static avr_cycle_count_t _hd44780_busy_timer(struct avr_t * avr, avr_cycle_count_t when, void * param)
 {
 	hd44780_t *b = (hd44780_t *) param;
 //	printf("%s called\n", __FUNCTION__);
@@ -93,9 +90,7 @@ _hd44780_busy_timer(
 	return 0;
 }
 
-static void
-hd44780_kick_cursor(
-	hd44780_t *b)
+static void hd44780_kick_cursor(hd44780_t *b)
 {
 	if (hd44780_get_flag(b, HD44780_FLAG_I_D)) {
 		if (b->cursor < 79)
@@ -115,9 +110,7 @@ hd44780_kick_cursor(
 /*
  * current data byte is ready in b->datapins
  */
-static uint32_t
-hd44780_write_data(
-		hd44780_t *b)
+static uint32_t hd44780_write_data(hd44780_t *b)
 {
 	uint32_t delay = 37; // uS
 	b->vram[b->cursor] = b->datapins;
@@ -134,75 +127,97 @@ hd44780_write_data(
 /*
  * current command is ready in b->datapins
  */
-static uint32_t
-hd44780_write_command(
-		hd44780_t *b)
+static uint32_t hd44780_write_command(hd44780_t *b)
 {
-	uint32_t delay = 37; // uS
-	int top = 7;	// get highest bit set'm
-	while (top)
+	uint32_t delay = 37;	/* default delay is 37us */
+	int four, top;
+	
+	/* find highest bit set */
+	for (top = 7; top; top--)
+	{
 		if (b->datapins & (1 << top))
 			break;
-		else top--;
-	printf("hd44780_write_command %02x\n", b->datapins);
+	}
 
-	switch (top) {
-		// Set	DDRAM address
-		case 7:		// 1 ADD ADD ADD ADD ADD ADD ADD
-			printf("%s set DRAM address\n", __FUNCTION__);
-			b->cursor = b->datapins & 0x7f;
-			break;
-		// Set	CGRAM address
-		case 6:		// 0 1 ADD ADD ADD ADD ADD ADD ADD
-			printf("%s set CGRAM address\n", __FUNCTION__);
-			b->cursor = 64 + (b->datapins & 0x3f);
-			break;
-		// Function	set
-		case 5:	{	// 0 0 1 DL N F x x
-			int four = !hd44780_get_flag(b, HD44780_FLAG_D_L);
-			hd44780_set_flag(b, HD44780_FLAG_D_L, b->datapins & 16);
-			hd44780_set_flag(b, HD44780_FLAG_N, b->datapins & 8);
-			hd44780_set_flag(b, HD44780_FLAG_F, b->datapins & 4);
-			printf("%s FUNCTION SET DL=%d N=%d F=%d\n", __FUNCTION__,
-				(b->datapins & 16) == 16,
-				(b->datapins & 8) == 8,
-				(b->datapins & 4) == 4);
-			if (!four && !hd44780_get_flag(b, HD44780_FLAG_D_L)) {
-				printf("%s activating 4 bits mode\n", __FUNCTION__);
-				hd44780_set_flag(b, HD44780_FLAG_LOWNIBBLE, 0);
-			}
-		}	break;
-		// Cursor display shift
-		case 4:		// 0 0 0 1 S/C R/L x x
-			printf("%s cursor display shift\n", __FUNCTION__);
-			hd44780_set_flag(b, HD44780_FLAG_S_C, b->datapins & 8);
-			hd44780_set_flag(b, HD44780_FLAG_R_L, b->datapins & 4);
-			break;
+	printf("hd44780_write_command: top=%d, datapins=%02x\n", top, b->datapins);
+
+	/* the location of the highest 1 bit tells us the command */
+	switch (top)
+	{
+	case 7:
+		/* Set DDRAM address:
+		 *  1 ADD ADD ADD ADD ADD ADD ADD */
+		printf("%s: set DDRAM address\n", __FUNCTION__);
+		b->cursor = b->datapins & 0x7f;
+		break;
+
+	case 6:
+		/* Set CGRAM address
+		/* 0 1 ADD ADD ADD ADD ADD ADD ADD */
+		printf("%s: set CGRAM address\n", __FUNCTION__);
+		b->cursor = 64 + (b->datapins & 0x3f);
+		break;
+
+	case 5:
+		/* Function	set
+		 * 0 0 1 DL N F x x */
+		four = !hd44780_get_flag(b, HD44780_FLAG_D_L);
+		hd44780_set_flag(b, HD44780_FLAG_D_L, b->datapins & 16);
+		hd44780_set_flag(b, HD44780_FLAG_N, b->datapins & 8);
+		hd44780_set_flag(b, HD44780_FLAG_F, b->datapins & 4);
+
+		printf("%s FUNCTION SET DL=%d N=%d F=%d\n", __FUNCTION__,
+			(b->datapins & 16) == 16,
+			(b->datapins & 8) == 8,
+			(b->datapins & 4) == 4);
+
+		if (!four && !hd44780_get_flag(b, HD44780_FLAG_D_L))
+		{
+			printf("%s activating 4 bits mode\n", __FUNCTION__);
+			hd44780_set_flag(b, HD44780_FLAG_LOWNIBBLE, 0);
+		}
+		break;
+
+	case 4:
+		/* Cursor display shift
+		 * 0 0 0 1 S/C R/L x x  */
+		printf("%s cursor display shift\n", __FUNCTION__);
+		hd44780_set_flag(b, HD44780_FLAG_S_C, b->datapins & 8);
+		hd44780_set_flag(b, HD44780_FLAG_R_L, b->datapins & 4);
+		break;
+
+	case 3:
 		// Display on/off control
-		case 3:		// 0 0 0 0 1 D C B
-			printf("%s display on/off\n", __FUNCTION__);
-			hd44780_set_flag(b, HD44780_FLAG_D, b->datapins & 4);
-			hd44780_set_flag(b, HD44780_FLAG_C, b->datapins & 2);
-			hd44780_set_flag(b, HD44780_FLAG_B, b->datapins & 1);
-			hd44780_set_flag(b, HD44780_FLAG_DIRTY, 1);
-			break;
+		// 0 0 0 0 1 D C B
+		printf("%s display on/off\n", __FUNCTION__);
+		hd44780_set_flag(b, HD44780_FLAG_D, b->datapins & 4);
+		hd44780_set_flag(b, HD44780_FLAG_C, b->datapins & 2);
+		hd44780_set_flag(b, HD44780_FLAG_B, b->datapins & 1);
+		hd44780_set_flag(b, HD44780_FLAG_DIRTY, 1);
+		break;
+
+	case 2:	
 		// Entry mode set
-		case 2:		// 0 0 0 0 0 1 I/D S
-			printf("%s entry mode set\n", __FUNCTION__);
-			hd44780_set_flag(b, HD44780_FLAG_I_D, b->datapins & 2);
-			hd44780_set_flag(b, HD44780_FLAG_S, b->datapins & 1);
-			break;
+		// 0 0 0 0 0 1 I/D S
+		printf("%s entry mode set\n", __FUNCTION__);
+		hd44780_set_flag(b, HD44780_FLAG_I_D, b->datapins & 2);
+		hd44780_set_flag(b, HD44780_FLAG_S, b->datapins & 1);
+		break;
+
+	case 1:
 		// Return home
-		case 1:		// 0 0 0 0 0 0 1 x
-			printf("%s return home\n", __FUNCTION__);
-			_hd44780_reset_cursor(b);
-			delay = 1520;
-			break;
+		// 0 0 0 0 0 0 1 x
+		printf("%s return home\n", __FUNCTION__);
+		_hd44780_reset_cursor(b);
+		delay = 1520;
+		break;
+
+	case 0:
 		// Clear display
-		case 0:		// 0 0 0 0 0 0 0 1
-			printf("%s clear screen\n", __FUNCTION__);
-			_hd44780_clear_screen(b);
-			break;
+		// 0 0 0 0 0 0 0 1
+		printf("%s clear screen\n", __FUNCTION__);
+		_hd44780_clear_screen(b);
+		break;
 	}
 	return delay;
 }
@@ -217,28 +232,36 @@ static uint32_t hd44780_process_write(hd44780_t *b)
 	int comp = four && hd44780_get_flag(b, HD44780_FLAG_LOWNIBBLE);
 	int write = 0;
 
-	if (four) { // 4 bits !
+	if (four)
+	{
+		/* 4 bits */
 		if (comp)
-			b->datapins = (b->datapins & 0xf0) | ((b->pinstate >>  IRQ_HD44780_D4) & 0xf);
+			b->datapins = (b->datapins & 0xf0) | ((b->pinstate >> IRQ_HD44780_D4) & 0xf);
 		else
-			b->datapins = (b->datapins & 0xf) | ((b->pinstate >>  (IRQ_HD44780_D4-4)) & 0xf0);
+			b->datapins = (b->datapins & 0xf) | ((b->pinstate >> (IRQ_HD44780_D4-4)) & 0xf0);
 		write = comp;
-		printf("reading 4 bits of data. PINS=%08x, comp=%d\n", b->datapins, comp);
+		printf("hd44780_process_write: 4 bits of data. PINS=%08x, comp=%d\n", b->datapins, comp);
 
-		printf("flipping LOWNIBBLE flag.\n");
+		printf("hd44780_process_write: flipping LOWNIBBLE flag.\n");
 		b->flags ^= (1 << HD44780_FLAG_LOWNIBBLE);
 		print_flags(b);
-	} else {	// 8 bits
+	}
+	else
+	{
+		/* 8 bits */
 		b->datapins = (b->pinstate >>  IRQ_HD44780_D0) & 0xff;
 		write++;
 	}
 	avr_raise_irq(b->irq + IRQ_HD44780_DATA_IN, b->datapins);
 
 	// write has 8 bits to process
-	if (write) {
-		if (hd44780_get_flag(b, HD44780_FLAG_BUSY)) {
+	if (write)
+	{
+		if (hd44780_get_flag(b, HD44780_FLAG_BUSY))
+		{
 			printf("%s command %02x write when still BUSY\n", __FUNCTION__, b->datapins);
 		}
+
 		if (b->pinstate & (1 << IRQ_HD44780_RS))	// write data
 			delay = hd44780_write_data(b);
 		else										// write command
@@ -313,53 +336,45 @@ static uint32_t hd44780_process_read(hd44780_t *b)
 	return delay;
 }
 
-static avr_cycle_count_t
-_hd44780_process_e_pinchange(
-		struct avr_t * avr,
-        avr_cycle_count_t when, void * param)
+static avr_cycle_count_t _hd44780_process_e_pinchange(struct avr_t * avr, avr_cycle_count_t when, void * param)
 {
 	hd44780_t *b = (hd44780_t *) param;
+	int delay = 0; // in uS
 
-	hd44780_set_flag(b, HD44780_FLAG_REENTRANT, 1);
-
-#if 0
-	uint16_t touch = b->oldstate ^ b->pinstate;
-	printf("LCD: %04x %04x %c %c %c %c\n", b->pinstate, touch,
+	printf("LCD: e_pinchange: state=%04x delta_state=%04x RW=%c RS=%c LOW=%c BUSY=%c\n", b->pinstate, b->oldstate ^ b->pinstate,
 			b->pinstate & (1 << IRQ_HD44780_RW) ? 'R' : 'W',
 			b->pinstate & (1 << IRQ_HD44780_RS) ? 'D' : 'C',
 			hd44780_get_flag(b, HD44780_FLAG_LOWNIBBLE) ? 'L' : 'H',
 			hd44780_get_flag(b, HD44780_FLAG_BUSY) ? 'B' : ' ');
-#endif
-	int delay = 0; // in uS
 
-	if (b->pinstate & (1 << IRQ_HD44780_RW))	// read !?!
+	hd44780_set_flag(b, HD44780_FLAG_REENTRANT, 1);
+
+	if (b->pinstate & (1 << IRQ_HD44780_RW))	// read
 		delay = hd44780_process_read(b);
 	else										// write
 		delay = hd44780_process_write(b);
 
-	if (delay) {
+	if (delay)
+	{
 		hd44780_set_flag(b, HD44780_FLAG_BUSY, 1);
 		avr_raise_irq(b->irq + IRQ_HD44780_BUSY, 1);
 		avr_cycle_timer_register_usec(b->avr, delay,
 			_hd44780_busy_timer, b);
 	}
-//	b->oldstate = b->pinstate;
+	b->oldstate = b->pinstate;
 	hd44780_set_flag(b, HD44780_FLAG_REENTRANT, 0);
 	return 0;
 }
 
-static void
-hd44780_pin_changed_hook(
-		struct avr_irq_t * irq,
-		uint32_t value,
-        void *param)
+static void hd44780_pin_changed_hook(struct avr_irq_t * irq, uint32_t value, void *param)
 {
 	int i;
 	hd44780_t *b = (hd44780_t *) param;
 
 	uint16_t old = b->pinstate;
 
-	switch (irq->irq) {
+	switch (irq->irq)
+	{
 	case IRQ_HD44780_ALL:
 		/*
 		 * Update all the pins in one go by calling ourselves
@@ -379,9 +394,11 @@ hd44780_pin_changed_hook(
 			return;
 		break;
 	}
+
 	b->pinstate = (b->pinstate & ~(1 << irq->irq)) | (value << irq->irq);
 	int eo = old & (1 << IRQ_HD44780_E);
 	int e = b->pinstate & (1 << IRQ_HD44780_E);
+
 	/* on the E pin rising edge, do stuff otherwise just exit */
 	if (!eo && e)
 		avr_cycle_timer_register(b->avr, 1, _hd44780_process_e_pinchange, b);
@@ -415,6 +432,12 @@ void hd44780_init(struct avr_t *avr, struct hd44780_t * b, int width, int height
 	b->avr = avr;
 	b->w = width;
 	b->h = height;
+
+	/* assume 8-bit mode initially */
+	hd44780_set_flag(b, HD44780_FLAG_D_L, 1);
+
+	printf("performing hd44780_init\n");
+	print_flags(b);
 
 	/*
 	 * Register callbacks on all our IRQs
