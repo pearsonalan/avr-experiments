@@ -153,7 +153,7 @@ static uint32_t hd44780_write_command(hd44780_t *b)
 
 	case 6:
 		/* Set CGRAM address
-		/* 0 1 ADD ADD ADD ADD ADD ADD ADD */
+		 * 0 1 ADD ADD ADD ADD ADD ADD ADD */
 		printf("%s: set CGRAM address\n", __FUNCTION__);
 		b->cursor = 64 + (b->datapins & 0x3f);
 		break;
