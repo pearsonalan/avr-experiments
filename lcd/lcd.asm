@@ -115,17 +115,19 @@ reset:
 main:
 	rcall	lcd_init
 
+	rjmp	end
+
 	ldi	r17, $00
 	rcall	lcd_set_ddram_address
 	ldi	r17, $48		; 'H'
 	rcall	lcd_write_data
 
-	rjmp	end
-
 	ldi	r17, $01
 	rcall	lcd_set_ddram_address
 	ldi	r17, $65		; 'e'
 	rcall	lcd_write_data
+
+	rjmp	end
 
 	ldi	r17, $02
 	rcall	lcd_set_ddram_address
@@ -263,8 +265,6 @@ lcd_init:
 	; wait 40ms for power to stabilize after power-up	
 	rcall	delay_40_ms		; delay 40 ms
 	
-	rcall	pulse_d4			; pulse D4 pin after each step
-
 	; send init command, wait 4.1ms
 	;   RS=0, RW=0, DB[7..4]=b0011
 	ldi	temp, $03		; bits to set.
@@ -272,16 +272,12 @@ lcd_init:
 	rcall	lcd_pulse_e		; pulse the Enable flag
 	rcall	delay_4_1_ms		; wait 4.1 ms
 
-	rcall	pulse_d4			; pulse D4 pin after each step
-
 	; send init command, wait 100 us
 	;   RS=0, RW=0, DB[7..4]=b0011
 	ldi	temp, $03		; bits to set,
 	out	PORTB, temp		;    set the pins by writing to IO PORT B
 	rcall	lcd_pulse_e		; pulse the Enable flag
 	rcall	delay_100_us		; wait 100 us
-
-	rcall	pulse_d4			; pulse D4 pin after each step
 
 	; send init command, then wait for busy flag to go low
 	ldi	temp, $03		; bits to set,

@@ -187,8 +187,8 @@ static uint32_t hd44780_write_command(hd44780_t *b)
 		break;
 
 	case 3:
-		// Display on/off control
-		// 0 0 0 0 1 D C B
+		/* Display on/off control
+		 * 0 0 0 0 1 D C B */
 		printf("%s display on/off\n", __FUNCTION__);
 		hd44780_set_flag(b, HD44780_FLAG_D, b->datapins & 4);
 		hd44780_set_flag(b, HD44780_FLAG_C, b->datapins & 2);
@@ -197,30 +197,32 @@ static uint32_t hd44780_write_command(hd44780_t *b)
 		break;
 
 	case 2:	
-		// Entry mode set
-		// 0 0 0 0 0 1 I/D S
+		/* Entry mode set
+		 * 0 0 0 0 0 1 I/D S */
 		printf("%s entry mode set\n", __FUNCTION__);
 		hd44780_set_flag(b, HD44780_FLAG_I_D, b->datapins & 2);
 		hd44780_set_flag(b, HD44780_FLAG_S, b->datapins & 1);
 		break;
 
 	case 1:
-		// Return home
-		// 0 0 0 0 0 0 1 x
+		/* Return home
+		 * 0 0 0 0 0 0 1 x  */
 		printf("%s return home\n", __FUNCTION__);
 		_hd44780_reset_cursor(b);
 		delay = 1520;
 		break;
 
 	case 0:
-		// Clear display
-		// 0 0 0 0 0 0 0 1
+		/* Clear display
+		 * 0 0 0 0 0 0 0 1  */
 		printf("%s clear screen\n", __FUNCTION__);
 		_hd44780_clear_screen(b);
 		break;
 	}
+
 	return delay;
 }
+
 
 /*
  * the E pin went low, and it's a write
@@ -240,7 +242,7 @@ static uint32_t hd44780_process_write(hd44780_t *b)
 		else
 			b->datapins = (b->datapins & 0xf) | ((b->pinstate >> (IRQ_HD44780_D4-4)) & 0xf0);
 		write = comp;
-		printf("hd44780_process_write: 4 bits of data. PINS=%08x, comp=%d\n", b->datapins, comp);
+		printf("hd44780_process_write: 4 bits of data. PINS=%02x, comp=%d\n", b->datapins, comp);
 
 		printf("hd44780_process_write: flipping LOWNIBBLE flag.\n");
 		b->flags ^= (1 << HD44780_FLAG_LOWNIBBLE);
@@ -398,6 +400,11 @@ static void hd44780_pin_changed_hook(struct avr_irq_t * irq, uint32_t value, voi
 	b->pinstate = (b->pinstate & ~(1 << irq->irq)) | (value << irq->irq);
 	int eo = old & (1 << IRQ_HD44780_E);
 	int e = b->pinstate & (1 << IRQ_HD44780_E);
+
+	if (irq->irq == IRQ_HD44780_E)
+	{
+		printf("IRQ on E pin: value=%02x eo=%02x, e=%02x\n", value, eo, e);
+	}
 
 	/* on the E pin rising edge, do stuff otherwise just exit */
 	if (!eo && e)
