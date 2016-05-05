@@ -32,13 +32,17 @@ AVRA=/usr/local/bin/avra
 
 MCU=atmega328p
 
-.PHONY: all upload
+.PHONY: all upload sim
 
-all: lcd.hex
+all: lcd.hex sim
 
 lcd.hex: lcd.asm
 	$(AVRA) -b lcd.o -l lcd.lst lcd.asm
 
+sim:
+	make -C sim
+
 clean:
 	-rm lcd.lst lcd.cof lcd.eep.hex lcd.hex lcd.o
+	make -C sim clean
 
