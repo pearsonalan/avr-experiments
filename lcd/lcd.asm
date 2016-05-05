@@ -115,7 +115,7 @@ reset:
 main:
 	rcall	lcd_init
 
-	rjmp	end
+	;rjmp	end
 
 	ldi	r17, $00
 	rcall	lcd_set_ddram_address
@@ -127,7 +127,7 @@ main:
 	ldi	r17, $65		; 'e'
 	rcall	lcd_write_data
 
-	rjmp	end
+	;rjmp	end
 
 	ldi	r17, $02
 	rcall	lcd_set_ddram_address
@@ -581,6 +581,8 @@ pulse_d4:
 ;
 
 lcd_wait_for_not_busy:
+	jmp	delay_10_ms
+
 	rcall	lcd_read_busy		; read the busy flag into R1
 	tst	r1			; see if r1 is 0
 	brne	lcd_wait_for_not_busy	; if not 0, then LCD is busy, and loop
@@ -611,6 +613,9 @@ lcd_wait_for_not_busy:
 ;	r25
 ;
 lcd_read_busy:
+	ldi	temp, $70		; set the DDRB register to have
+	out	DDRB, temp		;   pins B0-B3 as input, pins B4-B6 as output
+
 	ldi	temp, $40		; set RW high to indicate that we are reading
 	out	PORTB, temp		; set DB[7..4] low
 					; set RS low
@@ -625,6 +630,9 @@ lcd_read_busy:
 	ldi	temp, $40
 	out	PORTB, temp
 	rcall	lcd_pulse_e		; toggle the enable flag.  this method includes some wait time
+
+	ldi	temp, $7f		; set the DDRB register to have
+	out	DDRB, temp		;   pins B0-B7 as output
 
 	ret
 
