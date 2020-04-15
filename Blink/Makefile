@@ -1,14 +1,14 @@
 PROG := blink
 
 ifndef PORT
-  PORT := /dev/ttyUSB0
+  PORT := /dev/ttyACM0
 endif
 
 ifndef BAUD
   BAUD := 115200
 endif
 
-ARDUINO_HOME=/usr/local/arduino-1.6.4
+ARDUINO_HOME=/usr/local/arduino-1.8.10
 ARDUINO_TOOLS=$(ARDUINO_HOME)/hardware/tools
 
 CPP=$(ARDUINO_TOOLS)/avr/bin/avr-g++
@@ -30,7 +30,7 @@ LIB_SERVO_SRC=$(ARDUINO_HOME)/libraries/Servo/src/avr
 CORE_OBJS= \
 	$(OBJDIR)/wiring.o $(OBJDIR)/wiring_analog.o $(OBJDIR)/wiring_shift.o \
 	$(OBJDIR)/wiring_pulse.o $(OBJDIR)/wiring_digital.o $(OBJDIR)/abi.o \
-	$(OBJDIR)/hooks.o $(OBJDIR)/new.o $(OBJDIR)/Stream.o $(OBJDIR)/HID.o \
+	$(OBJDIR)/hooks.o $(OBJDIR)/new.o $(OBJDIR)/Stream.o \
 	$(OBJDIR)/Print.o $(OBJDIR)/CDC.o $(OBJDIR)/IPAddress.o $(OBJDIR)/USBCore.o \
 	$(OBJDIR)/Tone.o $(OBJDIR)/WInterrupts.o $(OBJDIR)/WMath.o $(OBJDIR)/WString.o \
 	$(OBJDIR)/HardwareSerial.o $(OBJDIR)/HardwareSerial0.o $(OBJDIR)/HardwareSerial1.o \
