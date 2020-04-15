@@ -14,7 +14,7 @@ Connect Arduino Uno to USB port and wire circuit as above.
 
 ## Install
 
-Makefile works on Ubunto and expects Arduino IDE installed
+Makefile works on Ubuntu and expects Arduino IDE installed
 in /usr/local/arduino-1.8.10.
 
 ```
