@@ -8,7 +8,8 @@ but prefer to code in `vi` and use a GNU Makefile to run the avr toolchain
 commands needed to compile and upload the code.  Here are some of the 
 experiments I have:
 
- * Blink - the basic LED blink program
+ * Blink - The basic LED blink program
+ * Blink2 - Blink 2 LED attached to different pins
  * HardDriveMotor - code for running a Brushless DC Motor salvaged from an old Hard Drive
  * clock-testing - Simple code for generating signals on a pin from the arduino. My goal
    was to simply turn a pin on and off every clock cycle and hook the pin up to my 
