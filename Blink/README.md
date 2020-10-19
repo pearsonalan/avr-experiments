@@ -12,16 +12,29 @@ Pin13 -> LED -> R220 -> GND
 
 Connect Arduino Uno to USB port and wire circuit as above. 
 
-## Install
+## Install (Linux)
 
-Makefile works on Ubuntu and expects Arduino IDE installed
+Makefile.gnu works on Ubuntu and expects Arduino IDE installed
 in /usr/local/arduino-1.8.10.
 
 ```
-make
-make upload
+$ make -f Makefile.gnu
+$ make -f Makefile.gnu upload
+```
+
+## Install (Windows 10)
+
+Makefile.win32 works on Windows 10 with Microsoft Visual Studio's `NMAKE` utility.
+The Makefile.win32 expects Arduino IDE to be installed in `D:\Arduino`.
+
+```
+CMD> nmake /F Makefile.win32
+CMD> nmake /F Makefile.win32 upload
 ```
 
 ## Notes
 
-* Uses `/dev/ttyACM0` to talk to Arduino.
+### Linux 
+* Uses `/dev/ttyACM0` to talk to Arduino on Linux
+
+### Windows

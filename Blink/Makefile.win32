@@ -1,0 +1,93 @@
+PROG = blink
+
+!ifndef PORT
+PORT=COM4
+!endif
+
+!ifndef BAUD
+BAUD=115200
+!endif
+
+ARDUINO_HOME=D:\Arduino
+ARDUINO_TOOLS=$(ARDUINO_HOME)\hardware\tools
+
+CPP=$(ARDUINO_TOOLS)\avr\bin\avr-g++.exe
+CC=$(ARDUINO_TOOLS)\avr\bin\avr-gcc.exe
+AR=$(ARDUINO_TOOLS)\avr\bin\avr-ar.exe
+OBJCOPY=$(ARDUINO_TOOLS)\avr\bin\avr-objcopy.exe
+AVRDUDE=$(ARDUINO_TOOLS)\avr\bin\avrdude.exe
+AVRSIZE=$(ARDUINO_TOOLS)\avr\bin\avr-size.exe
+PANDOC=pandoc.exe
+
+AVRDUDE_CONF=$(ARDUINO_HOME)\hardware\tools\avr\etc\avrdude.conf
+
+CFLAGS=-c -g -Os -ffunction-sections -fdata-sections -MMD -mmcu=atmega328p
+CPPFLAGS=-c -g -Os -fno-exceptions -ffunction-sections -fdata-sections \
+	-fno-threadsafe-statics -MMD -mmcu=atmega328p
+DEFINES=-DF_CPU=16000000L -DARDUINO=10604 -DARDUINO_AVR_UNO -DARDUINO_ARCH_AVR
+INCLUDES=-I$(ARDUINO_HOME)\hardware\arduino\avr\cores\arduino \
+	-I$(ARDUINO_HOME)\hardware\arduino\avr\variants\standard \
+	-I$(ARDUINO_HOME)\libraries\Servo\src
+
+OBJDIR=obj
+
+ARDUINO_SRC=$(ARDUINO_HOME)\hardware\arduino\avr\cores\arduino
+
+CORE_OBJS= \
+	$(OBJDIR)\wiring.o $(OBJDIR)\wiring_analog.o $(OBJDIR)\wiring_shift.o \
+	$(OBJDIR)\wiring_pulse.o $(OBJDIR)\wiring_digital.o $(OBJDIR)\hooks.o \
+	$(OBJDIR)\main.o
+
+CORE_LIB=$(OBJDIR)\ArduinoCore.a
+
+OBJS=$(OBJDIR)\$(PROG).o
+ELF=$(OBJDIR)\$(PROG).elf
+EEP=$(OBJDIR)\$(PROG).eep
+HEX=$(OBJDIR)\$(PROG).hex
+
+all: build
+
+build: $(OBJDIR) $(ELF) $(EEP) $(HEX)
+
+docs: README.html
+
+$(OBJDIR):
+	mkdir $(OBJDIR)
+
+$(ELF): $(OBJDIR) $(OBJS) $(CORE_LIB)
+	$(CC) -Wall -Wextra -Os -Wl,--gc-sections -mmcu=atmega328p -o $(ELF) $(OBJS) $(CORE_LIB) -lm 
+
+$(EEP): $(ELF)
+	$(OBJCOPY) -O ihex -j .eeprom --set-section-flags=.eeprom=alloc,load --no-change-warnings --change-section-lma .eeprom=0 $(ELF) $(EEP)
+
+$(HEX): $(ELF)
+	$(OBJCOPY) -O ihex -R .eeprom $(ELF) $(HEX)
+	$(AVRSIZE) -A $(ELF)
+
+$(CORE_LIB): $(CORE_OBJS)
+	$(AR) rcs $@ $**
+
+upload: $(EEP) $(HEX)
+	$(AVRDUDE) -C$(AVRDUDE_CONF) -v -patmega328p -carduino -P$(PORT) -b$(BAUD) -D -Uflash:w:$(HEX):i 
+
+.cpp{$(OBJDIR)}.o:
+	$(CPP) $(CPPFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
+
+{$(ARDUINO_SRC)}.c{$(OBJDIR)}.o:
+	$(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
+
+{$(ARDUINO_SRC)}.cpp{$(OBJDIR)}.o:
+	$(CPP) $(CPPFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
+
+.md.html:
+	$(PANDOC) -t html -s -o $@ $<
+
+.SUFFIXES: .md
+
+clean:
+	del $(CORE_LIB)
+	del $(CORE_OBJS)
+	del $(OBJS)
+	del $(OBJDIR)\*.d
+	del $(ELF) $(EEP) $(HEX)
+	rmdir $(OBJDIR)
