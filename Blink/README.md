@@ -4,6 +4,9 @@ The canonical hello world of Arduino.
 
 This program will blink an LED attached to pin 13.
 
+There is nothing particularly interesting about this implementation of Blink.  What is interesting
+here is that I have created makefiles to compile and upload the project to the Arduino.
+
 ## Circuit
 
 ```
@@ -38,3 +41,4 @@ CMD> nmake /F Makefile.win32 upload
 * Uses `/dev/ttyACM0` to talk to Arduino on Linux
 
 ### Windows
+* Uses `COM4` to talk to Arduino (but use Device Manager > Ports to find COM port).
