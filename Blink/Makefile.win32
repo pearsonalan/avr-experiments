@@ -85,9 +85,10 @@ upload: $(EEP) $(HEX)
 .SUFFIXES: .md
 
 clean:
-	del $(CORE_LIB)
-	del $(CORE_OBJS)
-	del $(OBJS)
-	del $(OBJDIR)\*.d
-	del $(ELF) $(EEP) $(HEX)
-	rmdir $(OBJDIR)
+	-del $(CORE_LIB)
+	-del $(CORE_OBJS)
+	-del $(OBJS)
+	-del $(OBJDIR)\*.d
+	-del $(ELF) $(EEP) $(HEX)
+	-del README.html
+	-rmdir $(OBJDIR)
