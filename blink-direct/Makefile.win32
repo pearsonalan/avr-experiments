@@ -38,7 +38,7 @@ ELF=$(OBJDIR)\$(PROG).elf
 EEP=$(OBJDIR)\$(PROG).eep
 HEX=$(OBJDIR)\$(PROG).hex
 
-all: build
+all: build docs
 
 build: $(OBJDIR) $(ELF) $(EEP) $(HEX)
 
@@ -69,8 +69,6 @@ upload: $(EEP) $(HEX)
 .SUFFIXES: .md
 
 clean:
-	-del $(CORE_LIB)
-	-del $(CORE_OBJS)
 	-del $(OBJS)
 	-del $(OBJDIR)\*.d
 	-del $(ELF) $(EEP) $(HEX)
