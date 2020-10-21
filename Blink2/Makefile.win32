@@ -35,8 +35,13 @@ ARDUINO_SRC=$(ARDUINO_HOME)\hardware\arduino\avr\cores\arduino
 
 CORE_OBJS= \
 	$(OBJDIR)\wiring.o $(OBJDIR)\wiring_analog.o $(OBJDIR)\wiring_shift.o \
-	$(OBJDIR)\wiring_pulse.o $(OBJDIR)\wiring_digital.o $(OBJDIR)\hooks.o \
-	$(OBJDIR)\main.o
+	$(OBJDIR)\wiring_pulse.o $(OBJDIR)\wiring_digital.o $(OBJDIR)\abi.o \
+	$(OBJDIR)\hooks.o $(OBJDIR)\new.o $(OBJDIR)\Stream.o \
+	$(OBJDIR)\Print.o $(OBJDIR)\CDC.o $(OBJDIR)\IPAddress.o $(OBJDIR)\USBCore.o \
+	$(OBJDIR)\Tone.o $(OBJDIR)\WInterrupts.o $(OBJDIR)\WMath.o $(OBJDIR)\WString.o \
+	$(OBJDIR)\HardwareSerial.o $(OBJDIR)\HardwareSerial0.o $(OBJDIR)\HardwareSerial1.o \
+	$(OBJDIR)\HardwareSerial2.o $(OBJDIR)\HardwareSerial3.o $(OBJDIR)\main.o \
+
 
 CORE_LIB=$(OBJDIR)\ArduinoCore.a
 
