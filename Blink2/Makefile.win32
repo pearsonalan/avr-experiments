@@ -95,4 +95,5 @@ clean:
 	del $(OBJS)
 	del $(OBJDIR)\*.d
 	del $(ELF) $(EEP) $(HEX)
+	del README.html
 	rmdir $(OBJDIR)
