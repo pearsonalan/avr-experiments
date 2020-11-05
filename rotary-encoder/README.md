@@ -7,6 +7,9 @@ The rotary encoder operates by monitoring a wave form from the two switches
 
 ![Schematic](encoder-output-table.png)
 
+## Resources
+* [https://learn.adafruit.com/trinket-usb-volume-knob/code](https://learn.adafruit.com/trinket-usb-volume-knob/code)
+
 
 ## Circuit
 
