@@ -1,4 +1,4 @@
-PROG=rotary-encoder
+PROG=blink
 HTML=README.html
 
 include ../common.mk
