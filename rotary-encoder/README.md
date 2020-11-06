@@ -9,7 +9,8 @@ The rotary encoder operates by monitoring a wave form from the two switches
 
 ## Resources
 * [https://learn.adafruit.com/trinket-usb-volume-knob/code](https://learn.adafruit.com/trinket-usb-volume-knob/code)
-
+* [https://howtomechatronics.com/tutorials/arduino/rotary-encoder-works-use-arduino/](https://howtomechatronics.com/tutorials/arduino/rotary-encoder-works-use-arduino/)
+* [Datasheet of Bourn PEC11 Rotary Encoder](https://cdn-shop.adafruit.com/datasheets/pec11.pdf)
 
 ## Circuit
 
