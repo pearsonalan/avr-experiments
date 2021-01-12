@@ -1,0 +1,1 @@
+PANDOC=/usr/bin/pandoc

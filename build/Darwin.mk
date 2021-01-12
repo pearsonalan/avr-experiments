@@ -1,11 +1,14 @@
 PANDOC=/usr/local/bin/pandoc
 
+# These PORT and BAUD settings are for serial upload using the SparkFun
+# FTDI breakout to a "Boarduino" which is burned using the Duemilanove
+# Bootloader
 ifndef PORT
-  PORT := /dev/tty.usbmodem142401
+  PORT := /dev/cu.usbserial-AL00EZFL
 endif
 
 ifndef BAUD
-  BAUD := 115200
+  BAUD := 57600
 endif
 
 ARDUINO_HOME=/Applications/Arduino.app/Contents/Java

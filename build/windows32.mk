@@ -1,0 +1,1 @@
+PANDOC=pandoc.exe
