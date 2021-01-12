@@ -1,0 +1,3 @@
+*.dSYM
+wave.vcd
+avr-sim
