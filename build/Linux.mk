@@ -11,4 +11,3 @@ endif
 ARDUINO_HOME=/usr/local/arduino-1.8.13
 ARDUINO_TOOLS=$(ARDUINO_HOME)/hardware/tools
 AVR_HOME=$(ARDUINO_HOME)/hardware/tools/avr
-

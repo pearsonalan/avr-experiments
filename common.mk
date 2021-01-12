@@ -40,7 +40,11 @@ CORE_OBJS= \
 	$(OBJDIR)/HardwareSerial2.o $(OBJDIR)/HardwareSerial3.o $(OBJDIR)/main.o \
 	$(OBJDIR)/Servo.o
 
-CORE_LIB=$(OBJDIR)/ArduinoCore.a
+ifdef NO_CORE_LIB
+  CORE_LIB=
+else
+	CORE_LIB=$(OBJDIR)/ArduinoCore.a
+endif
 
 OBJS=$(OBJDIR)/$(PROG).o
 ELF=$(OBJDIR)/$(PROG).elf
@@ -69,17 +73,17 @@ $(EEP): $(ELF)
 $(HEX): $(ELF)
 	$(OBJCOPY) -O ihex -R .eeprom $(ELF) $(HEX)
 
-
 $(CORE_LIB): $(CORE_OBJS)
 	$(AR) rcs $@ $^
 
 upload: $(EEP) $(HEX)
 	$(AVRDUDE) -C$(ARDUINO_HOME)/hardware/tools/avr/etc/avrdude.conf -v -p$(MCU) -carduino -P$(PORT) -b$(BAUD) -D -Uflash:w:$(HEX):i 
 
-$(PROG).o: $(PROG).cpp
-
 $(OBJDIR)/%.o: %.cpp
 	$(CPP) -c $(CPPFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
+
+$(OBJDIR)/%.o: %.c
+	$(CC) -c $(CFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
 
 $(OBJDIR)/%.o: $(ARDUINO_SRC)/%.cpp
 	$(CPP) -c $(CPPFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
