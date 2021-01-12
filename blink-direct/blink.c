@@ -45,12 +45,10 @@ static int n = 0;
 
 ISR(TIMER0_OVF_vect)
 {
-#if 1
 	// copy these to local variables so they can be stored in registers
 	// (volatile variables must be read from memory on every access)
 	unsigned long m = timer0_millis;
 	unsigned char f = timer0_fract;
-	unsigned long c;
 
 	m += MILLIS_INC;
 	f += FRACT_INC;
@@ -61,25 +59,14 @@ ISR(TIMER0_OVF_vect)
 
 	timer0_fract = f;
 	timer0_millis = m;
-	c = timer0_overflow_count++;
+	timer0_overflow_count++;
 
-#endif
-
-#if 0
-	if ((c % 2) == 1) {
-		PINB |= (1<<PB4);
-	} else {
-		PINB &= ~(1<<PB4);
-	}
-#else
+  // Toggle PIN PB4 on every overflow
 	n = n ^ (1<<PB4);
 	PINB = n;
-#endif
 }
 
-#if 1
-unsigned long micros()
-{
+unsigned long micros() {
 	unsigned long m;
 	uint8_t oldSREG = SREG, t;
 	
@@ -95,25 +82,19 @@ unsigned long micros()
 	return ((m << 8) + t) * (64 / clockCyclesPerMicrosecond());
 }
 
-void delay(unsigned long ms)
-{
+void delay(unsigned long ms) {
 	uint16_t start = (uint16_t)micros();
 
-	while (ms > 0)
-	{
-		if (((uint16_t)micros() - start) >= 1000)
-		{
+	while (ms > 0) {
+		if (((uint16_t)micros() - start) >= 1000) {
 			ms--;
 			start += 1000;
 		}
 	}
 }
 
-#endif
-
 /* perform one-time initialization */
-void init()
-{
+void init() {
 	// set timer 0 prescale factor to 64
 	// this combination is for the standard 168/328/1280/2560
 	TCCR0B = 0x03;
@@ -133,24 +114,21 @@ void init()
 	sei();
 }
 
-int main() 
-{
+int main() {
 	init();
 
+  // Set direction of PIN B5 and B4 to be output
 	DDRB = (1<<DDB5) | (1<<DDB4);
 	PORTB = 0;
 
-	/* Insert nop for synchronization*/
+	// Add nop for synchronization.... why???
 	_NOP();
 
-	for (;;)
-	{
-#if 1
-		delay(1000);
-		PINB |= (1<<PB5);
-		delay(1000);
-		PINB &= ~(1<<PB5);
-#endif
+	for (;;) {
+		PINB |= (1<<PB5);    // Turn pin B5 on
+		delay(500);          // Delay 500 miliseconds
+		PINB &= ~(1<<PB5);   // Turn pin B5 off
+		delay(500);          // Delay 500 miliseconds
 	}
 
 	return 0;
