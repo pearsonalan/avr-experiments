@@ -16,11 +16,39 @@ AVRDUDE=$(AVR_HOME)/bin/avrdude
 AVRSIZE=$(AVR_HOME)/bin/avr-size
 AVRA=/usr/local/bin/avra
 
-MCU=atmega328p
+# Default to using the ATmega328P if no other MCU is specified
+ifndef MCU
+	MCU=atmega328p
+endif
+
+$(info MCU is $(MCU))
+
+ifeq ($(MCU), atmega328p)
+  $(info Building for ATmega328p)
+  AVRDUDE_MCU=atmega328p
+  ARDUINO_ID=10604
+	ifndef F_CPU
+		F_CPU=1600000L
+	endif
+	DEFINES := -DARDUINO_AVR_UNO -DARDUINO_ARCH_AVR
+endif
+
+ifeq ($(MCU), atmega644pa)
+  $(info Building for ATmega644pa)
+	AVRDUDE_MCU=m644p
+	ifndef F_CPU
+		F_CPU=1000000L
+	endif
+endif
+
+DEFINES := $(DEFINES) -DF_CPU=$(F_CPU)
+ifdef ARDUINO_ID
+  DEFINES := $(DEFINES) -DARDUINO=$(ARDUINO_ID) 
+endif
 
 CFLAGS=-g -Os -Wall -Wextra -ffunction-sections -fdata-sections -MMD -mmcu=$(MCU)
 CPPFLAGS=-g -Os -fno-exceptions -ffunction-sections -fdata-sections -fno-threadsafe-statics -MMD -mmcu=$(MCU)
-DEFINES=-DF_CPU=16000000L -DARDUINO=10604 -DARDUINO_AVR_UNO -DARDUINO_ARCH_AVR
+
 INCLUDES=-I$(ARDUINO_HOME)/hardware/arduino/avr/cores/arduino \
         -I$(ARDUINO_HOME)/hardware/arduino/avr/variants/standard \
         -I$(ARDUINO_HOME)/libraries/Servo/src
@@ -77,7 +105,10 @@ $(CORE_LIB): $(CORE_OBJS)
 	$(AR) rcs $@ $^
 
 upload: $(EEP) $(HEX)
-	$(AVRDUDE) -C$(ARDUINO_HOME)/hardware/tools/avr/etc/avrdude.conf -v -p$(MCU) -carduino -P$(PORT) -b$(BAUD) -D -Uflash:w:$(HEX):i 
+	$(AVRDUDE) -C$(ARDUINO_HOME)/hardware/tools/avr/etc/avrdude.conf -v -p$(AVRDUDE_MCU) -carduino -P$(PORT) -b$(BAUD) -D -Uflash:w:$(HEX):i
+
+upload-isp: $(EEP) $(HEX)
+	$(AVRDUDE) -C$(ARDUINO_HOME)/hardware/tools/avr/etc/avrdude.conf -v -p$(AVRDUDE_MCU) -cusbtiny -Uflash:w:$(HEX):i
 
 $(OBJDIR)/%.o: %.cpp
 	$(CPP) -c $(CPPFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
