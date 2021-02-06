@@ -65,13 +65,20 @@ CORE_OBJS= \
 	$(OBJDIR)/Print.o $(OBJDIR)/CDC.o $(OBJDIR)/IPAddress.o $(OBJDIR)/USBCore.o \
 	$(OBJDIR)/Tone.o $(OBJDIR)/WInterrupts.o $(OBJDIR)/WMath.o $(OBJDIR)/WString.o \
 	$(OBJDIR)/HardwareSerial.o $(OBJDIR)/HardwareSerial0.o $(OBJDIR)/HardwareSerial1.o \
-	$(OBJDIR)/HardwareSerial2.o $(OBJDIR)/HardwareSerial3.o $(OBJDIR)/main.o \
-	$(OBJDIR)/Servo.o
+	$(OBJDIR)/HardwareSerial2.o $(OBJDIR)/HardwareSerial3.o $(OBJDIR)/Servo.o
+CORE_LIB=$(OBJDIR)/ArduinoCore.a
 
-ifdef NO_CORE_LIB
-  CORE_LIB=
-else
-	CORE_LIB=$(OBJDIR)/ArduinoCore.a
+ARDUINO_MAIN_OBJS = $(OBJDIR)/main.o 
+ARDUINO_MAIN_LIB=$(OBJDIR)/ArduinoMain.a
+
+LIBS :=
+
+ifndef NO_CORE_LIB
+LIBS := $(LIBS) $(CORE_LIB)
+endif
+
+ifndef NO_ARDUINO_MAIN
+LIBS := $(LIBS) $(ARDUINO_MAIN_LIB)
 endif
 
 OBJS=$(OBJDIR)/$(PROG).o
@@ -92,17 +99,20 @@ build: $(OBJDIR) $(ELF) $(EEP) $(HEX)
 $(OBJDIR):
 	mkdir $(OBJDIR)
 
-$(ELF): $(OBJS) $(CORE_LIB)
-	$(CC) -Wall -Wextra -Os -Wl,--gc-sections -mmcu=$(MCU) -o $(ELF) $(OBJS) $(CORE_LIB) -lm 
+$(CORE_LIB): $(CORE_OBJS)
+	$(AR) rcs $@ $^
+
+$(ARDUINO_MAIN_LIB): $(ARDUINO_MAIN_OBJS)
+	$(AR) rcs $@ $^
+
+$(ELF): $(OBJS) $(LIBS)
+	$(CC) -Wall -Wextra -Os -Wl,--gc-sections -mmcu=$(MCU) -o $(ELF) $(OBJS) $(LIBS) -lm 
 
 $(EEP): $(ELF)
 	$(OBJCOPY) -O ihex -j .eeprom --set-section-flags=.eeprom=alloc,load --no-change-warnings --change-section-lma .eeprom=0 $(ELF) $(EEP)
 
 $(HEX): $(ELF)
 	$(OBJCOPY) -O ihex -R .eeprom $(ELF) $(HEX)
-
-$(CORE_LIB): $(CORE_OBJS)
-	$(AR) rcs $@ $^
 
 upload: $(EEP) $(HEX)
 	$(AVRDUDE) -C$(ARDUINO_HOME)/hardware/tools/avr/etc/avrdude.conf -v -p$(AVRDUDE_MCU) -carduino -P$(PORT) -b$(BAUD) -D -Uflash:w:$(HEX):i
@@ -148,14 +158,8 @@ docs: $(HTML)
 # Recusrsive clean
 
 clean:
-	-rm $(OBJS)
-	-rm $(CORE_OBJS) 
-	-rm $(CORE_LIB)
-	-rm $(ELF)
-	-rm $(EEP)
-	-rm $(HEX)
-	-rm $(OBJDIR)/*.d
-	-rm $(HTML)
+	-rm $(OBJS) $(CORE_OBJS) $(CORE_LIB) $(ARDUINO_MAIN_OBJS) $(ARDUINO_MAIN_LIB)
+	-rm $(ELF) $(EEP) $(HEX) $(OBJDIR)/*.d $(HTML)
 
 clean: clean-dirs
 
