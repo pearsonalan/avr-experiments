@@ -24,3 +24,18 @@ to which the segments are connected (not wiring or physical pins).
   segments
 * __display-digit__ - Display digits 0 - 9 on the seven segment display. Uses
   direct PORT access to turn on the segments.
+
+
+## Shift Register
+
+
+### Circuit
+
+This circuit uses a [74HC595 Shift Register](http://velouria.lan/ElectronicsNotebook/Datasheets/pdf/sn74hc595.pdf) to connect to the ATmega328.
+
+* [Fritzing Sketch](circuits/seven-seg-shift-register.fzz)
+
+![Fritzing Sketch](images/seven-seg-shift-register-schematic.png)
+
+### Projects
+
