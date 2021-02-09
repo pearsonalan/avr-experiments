@@ -18,6 +18,10 @@ constexpr int patterns[10] = {
   0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F
 };
 
+constexpr int char_pins[4] = {
+  PB1, PB2, PB3, PB4
+};
+
 // Shows 4 digits on a 4-character 7 segment display.
 // This code assumes the following wiring
 //
@@ -54,15 +58,18 @@ private:
 };
 
 Display::Display(bool leading_zeros) : leading_zeros_(leading_zeros) {
-  for (int i = 9; i <= 12; i++) {
-    pinMode(i, OUTPUT);
-    digitalWrite(i, HIGH);
-  }
+  // Set the bits in DDRB to indicate PB1..PB4 are output
+  DDRB |= _BV(PB1) | _BV(PB2) | _BV(PB3) | _BV(PB4);
 
-  for (int i = 0; i <= 7; i++) {
-    pinMode(i, OUTPUT);
-    digitalWrite(i, HIGH);
-  }
+  // Set all characters off.  We need to drive the character enable pin low
+  // to allow current to flow through the LEDs
+  PORTB |= _BV(PB1) | _BV(PB2) | _BV(PB3) | _BV(PB4);
+
+  // Set all pins in PORTD to be output
+  DDRD = 0xFF;
+
+  // Turn off all segments initially
+  PORTD = 0;
 }
 
 void Display::display(int value) {
@@ -74,12 +81,21 @@ void Display::display(int value) {
 }
 
 void Display::refresh() {
-  digitalWrite(active_character_ + 9, HIGH);
+  // Turn off the character that was active (set enable pin HIGH)
+  PORTB |= _BV(char_pins[active_character_]);
+
+  // advance to the next character
   if (++active_character_ == 4) active_character_ = 0;
+
+  // load the pattern to show for the given character
   int pattern = patterns[digits_[active_character_]];
   if (!show_char_[active_character_]) pattern = 0;
+
+  // set the pattern
   PORTD = pattern;
-  digitalWrite(active_character_ + 9, LOW);
+
+  // Drive the character enable pin low to turn on the character
+  PORTB &= ~_BV(char_pins[active_character_]);
 }
 
 Display display(false);
