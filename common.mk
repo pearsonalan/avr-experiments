@@ -49,14 +49,19 @@ endif
 CFLAGS=-g -Os -Wall -Wextra -ffunction-sections -fdata-sections -MMD -mmcu=$(MCU)
 CPPFLAGS=-g -Os -fno-exceptions -ffunction-sections -fdata-sections -fno-threadsafe-statics -MMD -mmcu=$(MCU)
 
-INCLUDES=-I$(ARDUINO_HOME)/hardware/arduino/avr/cores/arduino \
+ARDUINO_SRC=$(ARDUINO_HOME)/hardware/arduino/avr/cores/arduino
+LIB_SERVO_SRC=$(ARDUINO_HOME)/libraries/Servo/src/avr
+SPI_SRC=$(ARDUINO_HOME)/hardware/arduino/avr/libraries/SPI/src
+
+INCLUDES=-I$(ARDUINO_SRC) \
         -I$(ARDUINO_HOME)/hardware/arduino/avr/variants/standard \
         -I$(ARDUINO_HOME)/libraries/Servo/src
 
-OBJDIR=obj
+ifdef SPI
+INCLUDES += -I$(SPI_SRC)
+endif
 
-ARDUINO_SRC=$(ARDUINO_HOME)/hardware/arduino/avr/cores/arduino
-LIB_SERVO_SRC=$(ARDUINO_HOME)/libraries/Servo/src/avr
+OBJDIR=obj
 
 CORE_OBJS= \
 	$(OBJDIR)/wiring.o $(OBJDIR)/wiring_analog.o $(OBJDIR)/wiring_shift.o \
@@ -66,19 +71,25 @@ CORE_OBJS= \
 	$(OBJDIR)/Tone.o $(OBJDIR)/WInterrupts.o $(OBJDIR)/WMath.o $(OBJDIR)/WString.o \
 	$(OBJDIR)/HardwareSerial.o $(OBJDIR)/HardwareSerial0.o $(OBJDIR)/HardwareSerial1.o \
 	$(OBJDIR)/HardwareSerial2.o $(OBJDIR)/HardwareSerial3.o $(OBJDIR)/Servo.o
+
+ifdef SPI
+CORE_OBJS += $(OBJDIR)/SPI.o
+endif
+
 CORE_LIB=$(OBJDIR)/ArduinoCore.a
 
 ARDUINO_MAIN_OBJS = $(OBJDIR)/main.o 
 ARDUINO_MAIN_LIB=$(OBJDIR)/ArduinoMain.a
 
-LIBS :=
+
+LIBS =
 
 ifndef NO_CORE_LIB
-LIBS := $(LIBS) $(CORE_LIB)
+LIBS += $(CORE_LIB)
 endif
 
 ifndef NO_ARDUINO_MAIN
-LIBS := $(LIBS) $(ARDUINO_MAIN_LIB)
+LIBS += $(ARDUINO_MAIN_LIB)
 endif
 
 OBJS=$(OBJDIR)/$(PROG).o
@@ -130,6 +141,9 @@ $(OBJDIR)/%.o: $(ARDUINO_SRC)/%.cpp
 	$(CPP) -c $(CPPFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
 
 $(OBJDIR)/%.o: $(LIB_SERVO_SRC)/%.cpp
+	$(CPP) -c $(CPPFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
+
+$(OBJDIR)/%.o: $(SPI_SRC)/%.cpp
 	$(CPP) -c $(CPPFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
 
 $(OBJDIR)/%.o: $(ARDUINO_SRC)/%.c
