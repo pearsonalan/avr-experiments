@@ -20,17 +20,17 @@ constexpr int patterns[10] = {
   0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F
 };
 
-// Pin connected to ST_CP of 74HC595
-constexpr int latchPin = 8;
+// Pin connected to RCLK (Storage Register Clock or latch pin) of 74HC595
+constexpr int latchPin = 10;
 
-// Pin connected to SH_CP of 74HC595
-constexpr int clockPin = 12;
+// Pin connected to SRCLK (Shift Register Clock) of 74HC595
+constexpr int clockPin = 9;
 
-// Pin connected to DS of 74HC595
-constexpr int dataPin = 11;
+// Pin connected to SER of 74HC595
+constexpr int dataPin = 8;
 
 constexpr int char_pins[6] = {
-  PC0, PC1, PC2, PC3, PC4, PC5
+  PC2, PC1, PC0, PC3, PC4, PC5
 };
 
 #define BV(x) _BV(x)
@@ -163,7 +163,7 @@ int main() {
       shift_time = 0;
     }
     display.refresh();
-    delayMicroseconds(5000);
+    delayMicroseconds(1000);
     iters++;
   }
 }
