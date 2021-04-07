@@ -81,7 +81,7 @@ ifndef NO_ARDUINO_MAIN
 LIBS := $(LIBS) $(ARDUINO_MAIN_LIB)
 endif
 
-OBJS=$(OBJDIR)/$(PROG).o
+OBJS=$(OBJDIR)/$(PROG).o $(foreach module, $(MODULES), $(OBJDIR)/$(module).o)
 ELF=$(OBJDIR)/$(PROG).elf
 EEP=$(OBJDIR)/$(PROG).eep
 HEX=$(OBJDIR)/$(PROG).hex
@@ -121,6 +121,9 @@ upload-isp: $(EEP) $(HEX)
 	$(AVRDUDE) -C$(ARDUINO_HOME)/hardware/tools/avr/etc/avrdude.conf -v -p$(AVRDUDE_MCU) -cusbtiny -Uflash:w:$(HEX):i
 
 $(OBJDIR)/%.o: %.cpp
+	$(CPP) -c $(CPPFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
+
+$(OBJDIR)/%.o: %.cc
 	$(CPP) -c $(CPPFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
 
 $(OBJDIR)/%.o: %.c
