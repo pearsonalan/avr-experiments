@@ -31,11 +31,23 @@ class Display {
   Display(bool leading_zeros, int data_pin, int clock_pin, int latch_pin,
           const int (&char_control_pins)[4]);
 
+  void setLeadingZeros(bool value) {
+    leading_zeros_ = value;
+  }
+
   // Set the value (0-9999) to show on the 4-character display
-  void display(unsigned long value);
+  void displayNumber(unsigned long value);
 
   // Enables display of the decimal point at the given position
   void enableDP(int p) { show_dp_[p] = true; }
+
+  // Set the value (0-9999) to show on the 4-character display and turn on one
+  // of the decimal points
+  void displayNumber(unsigned long value, int dp) {
+    disableDP();
+    displayNumber(value);
+    enableDP(dp);
+  }
 
   // Turns off the decimal point at all positions
   void disableDP() { 
@@ -46,7 +58,7 @@ class Display {
 
   // Must be called approximately every 2ms to keep the Persistence-of-vision
   // effect showing all 4 characters.
-  void refresh();
+  void Refresh();
 
  private:
   uint8_t active_character_ = 0;
@@ -95,7 +107,7 @@ Display::Display(bool leading_zeros, int data_pin,
   }
 }
 
-void Display::display(unsigned long value) {
+void Display::displayNumber(unsigned long value) {
   for (uint8_t i = 0; i < 4; i++) {
     show_char_[3 - i] = (value != 0 || leading_zeros_);
     digits_[3 - i] = (uint8_t)(value % 10);
@@ -103,7 +115,7 @@ void Display::display(unsigned long value) {
   }
 }
 
-void Display::refresh() {
+void Display::Refresh() {
   int prev_active_character = active_character_;
   // advance to the next character
   if (++active_character_ == 4) active_character_ = 0;
@@ -132,9 +144,7 @@ void Display::refresh() {
 
 
 //
-// Controller class to manage buttons
-// This class uses INT0 and INT1 to read the state of buttons attached
-// to PD2 and PD3.
+// Interrupt handlers to handle input buttons
 //
 
 constexpr int8_t DisplayCelsius = 0;
@@ -143,24 +153,28 @@ constexpr int8_t DisplayADC = 2;
 constexpr int8_t DisplayVoltage = 3;
 constexpr int8_t DisplayResistance = 4;
 
+// Button attached to INT0 will cycle through the display modes
+// setting mode_changed = 1 on each press.
+
 volatile int8_t mode = DisplayCelsius;
 volatile int8_t mode_changed = 1;
 
 ISR(INT0_vect) {
-  static int8_t prev_state = HIGH;
-  int8_t state = digitalRead(2);
-  if (state == LOW && prev_state == HIGH) {
-    if (mode == DisplayResistance) {
-      mode = DisplayCelsius;
-    } else {
-      ++mode;
-    }
-    mode_changed = 1;
+  if (mode == DisplayResistance) {
+    mode = DisplayCelsius;
+  } else {
+    ++mode;
   }
-  prev_state = state;
+  mode_changed = 1;
 }
 
+
+// Button attached to INT1 will cycle through history
+volatile int8_t history_button_press = 0;
+
 ISR(INT1_vect) {
+  history_button_press = 1;
+  mode_changed = 1;
 }
 
 //
@@ -183,16 +197,166 @@ constexpr int CC3 = A0;
 
 constexpr int THERMISTOR_PIN = A4;
 
+// Class to periodically sample an ADC pin and average the value in a
+// ring buffer for smoothing.
+class Sampler {
+public:
+  Sampler(int pin);
 
-// Number of milliseconds between reading the ADC
-constexpr int SAMPLE_INTERVAL = 1000;
+  // Calculate and return the average of the samples
+  int CalculateAverage() const;
 
-int CalculateAverage(const int (&samples)[8]) {
+  // Call frequently to have the sampler check if a new sample is due
+  // to be take. Returns 1 if a sample was read, else 0
+  uint8_t MaybeSample(unsigned long now);
+
+private:
+  // Number of samples to retain in the ring buffer
+  static constexpr int SAMPLE_SIZE = 8;
+
+  // Number of milliseconds between reading the ADC
+  static constexpr int SAMPLE_INTERVAL = 1000;
+
+  // Analog pin to sample
+  const int pin_;
+
+  // Keep a ring buffer of samples from the ADC of the thermistor
+  // to filter out noise.
+  int samples_[SAMPLE_SIZE] = {0};
+  int sample_pos_ = 0;
+
+  // Time in milliseconds the last sample was taken
+  unsigned long last_sample_time_ = 0;
+};
+
+
+Sampler::Sampler(int pin) : pin_(pin) {
+  // Populate the ring buffer initially with readings from the ADC
+  // so we don't have to worry about averaging over a partially-filled
+  // ring buffer.
+  for (int i = 0; i < SAMPLE_SIZE; i++) {
+    samples_[i] = analogRead(pin_);
+  }
+}
+
+uint8_t Sampler::MaybeSample(unsigned long now) {
+  if (now - last_sample_time_ > SAMPLE_INTERVAL) {
+    // Insert a sample into the ring buffer and move to the 
+    // next postion, or wrap around
+    samples_[sample_pos_] = analogRead(pin_);
+    if (++sample_pos_ == SAMPLE_SIZE) sample_pos_ = 0;
+    last_sample_time_ = now;
+    return 1;
+  }
+  return 0;
+}
+
+int Sampler::CalculateAverage() const {
   int sum = 0;
-  for (int i = 0; i < 8; i++) {
-    sum += samples[i];
+  for (int i = 0; i < SAMPLE_SIZE; i++) {
+    sum += samples_[i];
   }
   return sum / 8;
+}
+
+#define TEST_HISTORY 1
+
+// Class to keep a history of samples over a longer duration than the
+// ring buffer of the sampler.  This is used for "history browsing" of
+// previous samples
+class History {
+public:
+  History() {
+#if TEST_HISTORY
+    for (int i = 0; i < HISTORY_SIZE; i++) {
+      history_[i] = i+1;
+    }
+    sample_count_ = HISTORY_SIZE;
+#endif
+  }
+
+  // Update the history with the given sample if the time for an update
+  // has been reached
+  void MaybeUpdate(int sample, unsigned long now);
+
+  int sample_count() const { return sample_count_; }
+
+  // Gets the n-th prior sample. Get(1) returns the prior entry,
+  // Get(2) returns the entry before that, etc. Values of n greater than
+  // HISTORY_SIZE will "wrap around".
+  int Get(int n);
+
+private:
+  // The number of history items to retain
+  static constexpr int HISTORY_SIZE = 10;
+
+  // Number of milliseconds between reading the ADC
+  static constexpr unsigned long SAMPLE_INTERVAL = 60UL * 1000UL;
+
+  int history_[HISTORY_SIZE] = {0};
+  int sample_pos_ = 0;
+  int sample_count_ = 0;
+
+  // Time in milliseconds the last sample was taken
+  unsigned long last_sample_time_ = 0;
+};
+
+void History::MaybeUpdate(int sample, unsigned long now) {
+#if TEST_HISTORY
+  return;
+#endif
+  if (now - last_sample_time_ > SAMPLE_INTERVAL) {
+    // Insert a sample into the history and move to the 
+    // next postion, or wrap around
+    history_[sample_pos_] = sample;
+    if (sample_count_ < HISTORY_SIZE) ++sample_count_;
+    if (++sample_pos_ == HISTORY_SIZE) sample_pos_ = 0;
+    last_sample_time_ = now;
+  }
+}
+
+int History::Get(int n) {
+  return history_[((sample_pos_ - n) + HISTORY_SIZE) % HISTORY_SIZE];
+}
+
+
+// This class controls the display of history on the seven-segment display.
+class HistoryBrowser {
+ public:
+  HistoryBrowser(const History& history) : history_(history) {}
+
+  void Refresh(unsigned long now);
+  
+  bool IsShowingLabel() const { return showing_label_ == 1; }
+  bool IsShowingValue() const { return history_item_ != 0 && showing_label_ == 0; }
+  int8_t history_item() const { return history_item_; }
+
+ private:
+  const History& history_;
+
+  // Which item in the history to show.
+  int8_t history_item_ = 0;
+
+  // When set to 1, display the label of the history item rather than the
+  // value.
+  bool showing_label_ = 0;
+
+  unsigned long last_update_time_ = 0;
+};
+
+void HistoryBrowser::Refresh(const unsigned long now) {
+  if (history_button_press == 1) {
+    history_item_++;
+    if (history_item_ > history_.sample_count()) {
+      history_item_ = 1;
+    }
+    last_update_time_ = now;
+    history_button_press = 0;
+  } else {
+    if (now - last_update_time_ > 1000) {
+      history_item_ = 0;
+    }
+  }
 }
 
 // Resistance of the resistor in series with the thermistor.
@@ -224,84 +388,91 @@ float CelsiusToFarenheight(float c) {
 int main() {
   init();
   
-  // Set INT0 and INT1 to trigger on any logic change
-  EICRA = 0x05;
+  // Set INT0 and INT1 to trigger on the falling edge (button press)
+  EICRA = 0x0A;
 
   // Enable INT0 and INT1
   EIMSK = 0x03;
 
-  Display display(false, DATA_PIN, CLOCK_PIN, LATCH_PIN,
+  static Display display(false, DATA_PIN, CLOCK_PIN, LATCH_PIN,
                   {CC0, CC1, CC2, CC3});
 
-  // Keep a ring buffer of 8 samples from the ADC of the thermistor
+  // Keep a ring buffer of samples from the ADC of the thermistor
   // to filter out noise.
-  int samples[8];
-  int sample_pos = 0;
+  static Sampler sampler(THERMISTOR_PIN);
 
-  // Populate the ring buffer initially with 8 readings from the ADC
-  // so we don't have to worry about a partially-filled ring buffer
-  for (int i = 0; i < 8; i++) {
-    samples[i] = analogRead(THERMISTOR_PIN);
-  }
+  // Keeps a history of samples
+  static History history;
 
-  unsigned long last_reading_time = 0;
-  int8_t reading_changed = 0;
+  // Controls display while browsing history.
+  static HistoryBrowser history_browser(history);
 
   for (;;) {
-    // Read a sample periodically
     unsigned long now = millis();
-    if (now - last_reading_time > SAMPLE_INTERVAL) {
-      // Insert a sample into the ring buffer and move to the 
-      // next postion, or wrap around
-      samples[sample_pos] = analogRead(THERMISTOR_PIN);
-      if (++sample_pos == 8) sample_pos = 0;
-      reading_changed = 1;
-      last_reading_time = now;
-    }
+    int8_t reading_changed = sampler.MaybeSample(now);
+    history_browser.Refresh(now);
 
     // Update the value shown on the display if the display mode has changed
     // or if there is a new reading.
     if (mode_changed || reading_changed) {
-      // Get the average of the samples from the ring buffer and calculate
-      // the temperature from the sample.
-      int average_sample = CalculateAverage(samples);
+      // Get the average of the samples from the ring buffer.
+      int average_sample = sampler.CalculateAverage();
+
+      // Allow the history to be updated with the new sample if the time is due
+      history.MaybeUpdate(average_sample, now);
+
+      // Determine which sample to show on the display. This could be a reading from
+      // the history or the last live sample
+      int display_sample = average_sample;
+      if (history_browser.IsShowingValue()) {
+        display_sample = history.Get(history_browser.history_item());
+      }
+
+      // Calculate the voltage and temperature from the sample.
       int thermistor_voltage_mv =
-          (int)((long)average_sample * 5L * 1000L / 1023L);
+          (int)((long)display_sample * 5L * 1000L / 1023L);
       int thermistor_resistance_ohms =
-          (int)(SERIES_RESISTOR / (1023.0 / (float)average_sample - 1.0));
+          (int)(SERIES_RESISTOR / (1023.0 / (float)display_sample - 1.0));
       float temperature_celsius =
           ResistanceToCelsius(thermistor_resistance_ohms);
 
       switch (mode) {
         case DisplayCelsius:
-          display.display((int)(temperature_celsius * 10));
-          display.disableDP();
-          display.enableDP(2);
+          // Display temperature in degrees Celsius
+          display.displayNumber((int)(temperature_celsius * 10), 2);
           break;
+
         case DisplayFarenheight:
-          display.display((int)(CelsiusToFarenheight(temperature_celsius) * 10));
-          display.disableDP();
-          display.enableDP(2);
+          // Display temperature in degrees Farenheight
+          display.displayNumber((int)(CelsiusToFarenheight(temperature_celsius) * 10), 2);
           break;
+
         case DisplayADC:
-          display.display(average_sample);
+          // Display the raw sample data
           display.disableDP();
+          display.displayNumber(display_sample);
           break;
+
         case DisplayVoltage:
-          display.display(thermistor_voltage_mv);
-          display.enableDP(0);
+          // Display the calculated voltage drop across the thermistor.
+          display.displayNumber(thermistor_voltage_mv, 0);
           break;
+
         case DisplayResistance:
-          display.display(thermistor_resistance_ohms);
-          display.disableDP();
+          // Display the calculated resistance of the thermistor by the voltage
+          // divider formula in KOhms.
+          if (thermistor_resistance_ohms > 10000) {
+            display.displayNumber(thermistor_resistance_ohms / 10, 1);
+          } else {
+            display.displayNumber(thermistor_resistance_ohms, 0);
+          }
           break;
       }
 
       mode_changed = 0;
-      reading_changed = 0;
     }
 
-    display.refresh();
+    display.Refresh();
     delay(2);
   }
 }
