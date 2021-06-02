@@ -35,26 +35,9 @@ class Display {
     leading_zeros_ = value;
   }
 
-  // Set the value (0-9999) to show on the 4-character display
-  void displayNumber(unsigned long value);
-
-  // Enables display of the decimal point at the given position
-  void enableDP(int p) { show_dp_[p] = true; }
-
-  // Set the value (0-9999) to show on the 4-character display and turn on one
-  // of the decimal points
-  void displayNumber(unsigned long value, int dp) {
-    disableDP();
-    displayNumber(value);
-    enableDP(dp);
-  }
-
-  // Turns off the decimal point at all positions
-  void disableDP() { 
-    for (int p = 0; p < 4; p++) {
-      show_dp_[p] = false;
-    }
-  }
+  // Set the value (0-9999) to show on the 4-character display.  If dp is not
+  // -1, the corresponding decimal point is also turned on.
+  void displayNumber(unsigned long value, int dp = -1);
 
   // Must be called approximately every 2ms to keep the Persistence-of-vision
   // effect showing all 4 characters.
@@ -64,9 +47,7 @@ class Display {
   uint8_t active_character_ = 0;
   bool leading_zeros_ = false;
 
-  uint8_t digits_[4] = {0};
-  bool show_char_[4] = {false};
-  bool show_dp_[4] = {false};
+  uint8_t pattern_[4] = {0};
 
   // Pin connected to SER of 74HC595
   const int data_pin_;
@@ -107,10 +88,17 @@ Display::Display(bool leading_zeros, int data_pin,
   }
 }
 
-void Display::displayNumber(unsigned long value) {
+void Display::displayNumber(unsigned long value, int dp) {
   for (uint8_t i = 0; i < 4; i++) {
-    show_char_[3 - i] = (value != 0 || leading_zeros_);
-    digits_[3 - i] = (uint8_t)(value % 10);
+    bool show_char = (value != 0 || leading_zeros_);
+    bool show_dp = dp == 3 - i;
+    uint8_t digit = (uint8_t)(value % 10);
+
+    uint8_t pattern = 0;
+    if (show_char) pattern = patterns[digit];
+    if (show_dp) pattern |= 0x80;
+    pattern_[3 - i] = pattern;
+
     value = value / 10;
   }
 }
@@ -120,10 +108,8 @@ void Display::Refresh() {
   // advance to the next character
   if (++active_character_ == 4) active_character_ = 0;
 
-  // load the patterns to show for the active character
-  int pattern = patterns[digits_[active_character_]];
-  if (!show_char_[active_character_]) pattern = 0;
-  if (show_dp_[active_character_]) pattern |= 0x80;
+  // load the pattern to show for the active character
+  int pattern = pattern_[active_character_];
 
   // Set the latchPin low so the LEDs don't change while sending in bits
   digitalWrite(latch_pin_, LOW);
@@ -325,11 +311,25 @@ class HistoryBrowser {
  public:
   HistoryBrowser(const History& history) : history_(history) {}
 
+  // Call periodically to refresh the history browser display based on the
+  // presses of the history button and the passage of time. Returns true
+  // if the display needs to be updated.
   bool Refresh(unsigned long now);
   
-  bool IsShowingLabel() const { return showing_label_ == 1; }
-  bool IsShowingValue() const { return history_item_ != 0 && showing_label_ == 0; }
-  int8_t history_item() const { return history_item_; }
+  // Returns true if the display should show the history label.
+  bool IsShowingLabel() const {
+    return showing_label_ == 1;
+  }
+
+  // Returns true if the display should show a history value.
+  bool IsShowingValue() const {
+    return history_item_ != 0 && showing_label_ == 0;
+  }
+
+  // Return the index of the history item to show.
+  int8_t history_item() const {
+    return history_item_;
+  }
 
  private:
   const History& history_;
@@ -346,10 +346,16 @@ class HistoryBrowser {
 
 bool HistoryBrowser::Refresh(const unsigned long now) {
   bool display_changed = false;
+  // Determine if the History button has been pressed since last call to
+  // Refresh.
   if (history_button_press == 1) {
+    // Button is pressed. Increment the history item being viewed and
+    // initially show the label. 
     display_changed = true;
     history_item_++;
     if (history_item_ > history_.sample_count()) {
+      // Wrap around but to 1 instead of 0 since we want to stay in the history
+      // list
       history_item_ = 1;
     }
     showing_label_ = true;
@@ -357,16 +363,20 @@ bool HistoryBrowser::Refresh(const unsigned long now) {
     history_button_press = 0;
   } else if (history_item_ != 0) {
     if (now - last_update_time_ > 500 && showing_label_) {
+      // If showing history label and 500ms has elapsed, turn off the label.
       display_changed = true;
       showing_label_ = false;
     }
     if (now - last_update_time_ > 5000) {
+      // If showing history value and 5s has elapsed, turn off the history and
+      // go back to showing live data.
       display_changed = true;
       history_item_ = 0;
     }
   }
   return display_changed;
 }
+
 
 // Resistance of the resistor in series with the thermistor.
 // Can assume a 10K resistor or take an actual measurement.
@@ -426,17 +436,17 @@ int main() {
     // or if there is a new reading.
     if (display_changed) {
       if (history_browser.IsShowingLabel()) {
-        display.disableDP();
         display.displayNumber(history_browser.history_item());
       } else {
         // Get the average of the samples from the ring buffer.
         int average_sample = sampler.CalculateAverage();
 
-        // Allow the history to be updated with the new sample if the time is due
+        // Allow the history to be updated with the new sample if the time is
+        // due
         history.MaybeUpdate(average_sample, now);
 
-        // Determine which sample to show on the display. This could be a reading from
-        // the history or the last live sample
+        // Determine which sample to show on the display. This could be a
+        // reading from the history or the last live sample
         int display_sample = average_sample;
         if (history_browser.IsShowingValue()) {
           display_sample = history.Get(history_browser.history_item());
@@ -450,6 +460,8 @@ int main() {
         float temperature_celsius =
             ResistanceToCelsius(thermistor_resistance_ohms);
 
+        // Set up the display to show a value based on which mode the device
+        //  is in
         switch (mode) {
         case DisplayCelsius:
           // Display temperature in degrees Celsius
@@ -458,12 +470,12 @@ int main() {
 
         case DisplayFarenheight:
           // Display temperature in degrees Farenheight
-          display.displayNumber((int)(CelsiusToFarenheight(temperature_celsius) * 10), 2);
+          display.displayNumber(
+              (int)(CelsiusToFarenheight(temperature_celsius) * 10), 2);
           break;
 
         case DisplayADC:
           // Display the raw sample data
-          display.disableDP();
           display.displayNumber(display_sample);
           break;
 
