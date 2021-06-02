@@ -31,13 +31,16 @@ class Display {
   Display(bool leading_zeros, int data_pin, int clock_pin, int latch_pin,
           const int (&char_control_pins)[4]);
 
-  void setLeadingZeros(bool value) {
+  void SetLeadingZeros(bool value) {
     leading_zeros_ = value;
   }
 
   // Set the value (0-9999) to show on the 4-character display.  If dp is not
   // -1, the corresponding decimal point is also turned on.
-  void displayNumber(unsigned long value, int dp = -1);
+  void DisplayNumber(unsigned long value, int dp = -1);
+
+  // Set the pattern to show on the 4-character display
+  void DisplayPattern(const uint8_t *pattern);
 
   // Must be called approximately every 2ms to keep the Persistence-of-vision
   // effect showing all 4 characters.
@@ -88,7 +91,7 @@ Display::Display(bool leading_zeros, int data_pin,
   }
 }
 
-void Display::displayNumber(unsigned long value, int dp) {
+void Display::DisplayNumber(unsigned long value, int dp) {
   for (uint8_t i = 0; i < 4; i++) {
     bool show_char = (value != 0 || leading_zeros_);
     bool show_dp = dp == 3 - i;
@@ -101,6 +104,13 @@ void Display::displayNumber(unsigned long value, int dp) {
 
     value = value / 10;
   }
+}
+
+void Display::DisplayPattern(const uint8_t *pattern) {
+  pattern_[0] = pattern[0];
+  pattern_[1] = pattern[1];
+  pattern_[2] = pattern[2];
+  pattern_[3] = pattern[3];
 }
 
 void Display::Refresh() {
@@ -245,21 +255,12 @@ int Sampler::CalculateAverage() const {
   return sum / 8;
 }
 
-#define TEST_HISTORY 1
-
 // Class to keep a history of samples over a longer duration than the
 // ring buffer of the sampler.  This is used for "history browsing" of
 // previous samples
 class History {
 public:
-  History() {
-#if TEST_HISTORY
-    for (int i = 0; i < HISTORY_SIZE; i++) {
-      history_[i] = i+1;
-    }
-    sample_count_ = HISTORY_SIZE;
-#endif
-  }
+  History() {}
 
   // Update the history with the given sample if the time for an update
   // has been reached
@@ -274,10 +275,10 @@ public:
 
 private:
   // The number of history items to retain
-  static constexpr int HISTORY_SIZE = 10;
+  static constexpr int HISTORY_SIZE = 24;
 
   // Number of milliseconds between reading the ADC
-  static constexpr unsigned long SAMPLE_INTERVAL = 60UL * 1000UL;
+  static constexpr unsigned long SAMPLE_INTERVAL = 3600UL * 1000UL;
 
   int history_[HISTORY_SIZE] = {0};
   int sample_pos_ = 0;
@@ -288,9 +289,6 @@ private:
 };
 
 void History::MaybeUpdate(int sample, unsigned long now) {
-#if TEST_HISTORY
-  return;
-#endif
   if (now - last_sample_time_ > SAMPLE_INTERVAL) {
     // Insert a sample into the history and move to the 
     // next postion, or wrap around
@@ -326,6 +324,8 @@ class HistoryBrowser {
     return history_item_ != 0 && showing_label_ == 0;
   }
 
+  void ShowLabel(Display* display) const;
+
   // Return the index of the history item to show.
   int8_t history_item() const {
     return history_item_;
@@ -343,6 +343,27 @@ class HistoryBrowser {
 
   unsigned long last_update_time_ = 0;
 };
+
+void HistoryBrowser::ShowLabel(Display* display) const {
+  uint8_t pattern[4] = {0};
+  if (history_.sample_count() == 0) {
+    // 'n' => Segments C,E,G  =>    0101 0100  =>  0x54
+    pattern[0] = 0x54;
+    // 'o' => Segments C,D,E,G  =>  0101 1100  =>  0x5C
+    pattern[1] = 0x5C;
+    // 'h' => Segments C,E,F,G  =>  0111 0100  =>  0x74
+    pattern[3] = 0x74;
+  } else {
+    if (history_item_ >= 10) {
+      pattern[0] = patterns[(history_item_ / 10) % 10];
+    }
+    pattern[1] = patterns[history_item_ % 10];
+    // 'h' => Segments C,E,F,G  =>  0111 0100  =>  0x74
+    pattern[3] = 0x74;
+  }
+
+  display->DisplayPattern(pattern);
+}
 
 bool HistoryBrowser::Refresh(const unsigned long now) {
   bool display_changed = false;
@@ -366,6 +387,8 @@ bool HistoryBrowser::Refresh(const unsigned long now) {
       // If showing history label and 500ms has elapsed, turn off the label.
       display_changed = true;
       showing_label_ = false;
+      // If there is no history, go back go showing live data
+      if (history_.sample_count() == 0) history_item_ = 0;
     }
     if (now - last_update_time_ > 5000) {
       // If showing history value and 5s has elapsed, turn off the history and
@@ -436,7 +459,7 @@ int main() {
     // or if there is a new reading.
     if (display_changed) {
       if (history_browser.IsShowingLabel()) {
-        display.displayNumber(history_browser.history_item());
+        history_browser.ShowLabel(&display);
       } else {
         // Get the average of the samples from the ring buffer.
         int average_sample = sampler.CalculateAverage();
@@ -465,32 +488,32 @@ int main() {
         switch (mode) {
         case DisplayCelsius:
           // Display temperature in degrees Celsius
-          display.displayNumber((int)(temperature_celsius * 10), 2);
+          display.DisplayNumber((int)(temperature_celsius * 10), 2);
           break;
 
         case DisplayFarenheight:
           // Display temperature in degrees Farenheight
-          display.displayNumber(
+          display.DisplayNumber(
               (int)(CelsiusToFarenheight(temperature_celsius) * 10), 2);
           break;
 
         case DisplayADC:
           // Display the raw sample data
-          display.displayNumber(display_sample);
+          display.DisplayNumber(display_sample);
           break;
 
         case DisplayVoltage:
           // Display the calculated voltage drop across the thermistor.
-          display.displayNumber(thermistor_voltage_mv, 0);
+          display.DisplayNumber(thermistor_voltage_mv, 0);
           break;
 
         case DisplayResistance:
           // Display the calculated resistance of the thermistor by the voltage
           // divider formula in KOhms.
           if (thermistor_resistance_ohms > 10000) {
-            display.displayNumber(thermistor_resistance_ohms / 10, 1);
+            display.DisplayNumber(thermistor_resistance_ohms / 10, 1);
           } else {
-            display.displayNumber(thermistor_resistance_ohms, 0);
+            display.DisplayNumber(thermistor_resistance_ohms, 0);
           }
           break;
         }
