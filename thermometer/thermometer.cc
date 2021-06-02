@@ -325,7 +325,7 @@ class HistoryBrowser {
  public:
   HistoryBrowser(const History& history) : history_(history) {}
 
-  void Refresh(unsigned long now);
+  bool Refresh(unsigned long now);
   
   bool IsShowingLabel() const { return showing_label_ == 1; }
   bool IsShowingValue() const { return history_item_ != 0 && showing_label_ == 0; }
@@ -339,24 +339,33 @@ class HistoryBrowser {
 
   // When set to 1, display the label of the history item rather than the
   // value.
-  bool showing_label_ = 0;
+  bool showing_label_ = false;
 
   unsigned long last_update_time_ = 0;
 };
 
-void HistoryBrowser::Refresh(const unsigned long now) {
+bool HistoryBrowser::Refresh(const unsigned long now) {
+  bool display_changed = false;
   if (history_button_press == 1) {
+    display_changed = true;
     history_item_++;
     if (history_item_ > history_.sample_count()) {
       history_item_ = 1;
     }
+    showing_label_ = true;
     last_update_time_ = now;
     history_button_press = 0;
-  } else {
-    if (now - last_update_time_ > 1000) {
+  } else if (history_item_ != 0) {
+    if (now - last_update_time_ > 500 && showing_label_) {
+      display_changed = true;
+      showing_label_ = false;
+    }
+    if (now - last_update_time_ > 5000) {
+      display_changed = true;
       history_item_ = 0;
     }
   }
+  return display_changed;
 }
 
 // Resistance of the resistor in series with the thermistor.
@@ -409,34 +418,39 @@ int main() {
 
   for (;;) {
     unsigned long now = millis();
-    int8_t reading_changed = sampler.MaybeSample(now);
-    history_browser.Refresh(now);
+    bool display_changed = mode_changed == 1;
+    display_changed |= sampler.MaybeSample(now);
+    display_changed |= history_browser.Refresh(now);
 
     // Update the value shown on the display if the display mode has changed
     // or if there is a new reading.
-    if (mode_changed || reading_changed) {
-      // Get the average of the samples from the ring buffer.
-      int average_sample = sampler.CalculateAverage();
+    if (display_changed) {
+      if (history_browser.IsShowingLabel()) {
+        display.disableDP();
+        display.displayNumber(history_browser.history_item());
+      } else {
+        // Get the average of the samples from the ring buffer.
+        int average_sample = sampler.CalculateAverage();
 
-      // Allow the history to be updated with the new sample if the time is due
-      history.MaybeUpdate(average_sample, now);
+        // Allow the history to be updated with the new sample if the time is due
+        history.MaybeUpdate(average_sample, now);
 
-      // Determine which sample to show on the display. This could be a reading from
-      // the history or the last live sample
-      int display_sample = average_sample;
-      if (history_browser.IsShowingValue()) {
-        display_sample = history.Get(history_browser.history_item());
-      }
+        // Determine which sample to show on the display. This could be a reading from
+        // the history or the last live sample
+        int display_sample = average_sample;
+        if (history_browser.IsShowingValue()) {
+          display_sample = history.Get(history_browser.history_item());
+        }
 
-      // Calculate the voltage and temperature from the sample.
-      int thermistor_voltage_mv =
-          (int)((long)display_sample * 5L * 1000L / 1023L);
-      int thermistor_resistance_ohms =
-          (int)(SERIES_RESISTOR / (1023.0 / (float)display_sample - 1.0));
-      float temperature_celsius =
-          ResistanceToCelsius(thermistor_resistance_ohms);
+        // Calculate the voltage and temperature from the sample.
+        int thermistor_voltage_mv =
+            (int)((long)display_sample * 5L * 1000L / 1023L);
+        int thermistor_resistance_ohms =
+            (int)(SERIES_RESISTOR / (1023.0 / (float)display_sample - 1.0));
+        float temperature_celsius =
+            ResistanceToCelsius(thermistor_resistance_ohms);
 
-      switch (mode) {
+        switch (mode) {
         case DisplayCelsius:
           // Display temperature in degrees Celsius
           display.displayNumber((int)(temperature_celsius * 10), 2);
@@ -467,8 +481,8 @@ int main() {
             display.displayNumber(thermistor_resistance_ohms, 0);
           }
           break;
+        }
       }
-
       mode_changed = 0;
     }
 
