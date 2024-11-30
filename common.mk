@@ -18,7 +18,7 @@ AVRA=/usr/local/bin/avra
 
 # Default to using the ATmega328P if no other MCU is specified
 ifndef MCU
-	MCU=atmega328p
+  MCU=atmega328p
 endif
 
 $(info MCU is $(MCU))
@@ -27,18 +27,18 @@ ifeq ($(MCU), atmega328p)
   $(info Building for ATmega328p)
   AVRDUDE_MCU=atmega328p
   ARDUINO_ID=10604
-	ifndef F_CPU
-		F_CPU=16000000L
-	endif
-	DEFINES := -DARDUINO_AVR_UNO -DARDUINO_ARCH_AVR
+  ifndef F_CPU
+    F_CPU=16000000L
+  endif
+  DEFINES := -DARDUINO_AVR_UNO -DARDUINO_ARCH_AVR
 endif
 
 ifeq ($(MCU), atmega644pa)
   $(info Building for ATmega644pa)
-	AVRDUDE_MCU=m644p
-	ifndef F_CPU
-		F_CPU=1000000L
-	endif
+  AVRDUDE_MCU=m644p
+  ifndef F_CPU
+    F_CPU=1000000L
+  endif
 endif
 
 DEFINES := $(DEFINES) -DF_CPU=$(F_CPU)
@@ -92,7 +92,7 @@ ifndef NO_ARDUINO_MAIN
 LIBS += $(ARDUINO_MAIN_LIB)
 endif
 
-OBJS=$(OBJDIR)/$(PROG).o
+OBJS=$(OBJDIR)/$(PROG).o $(foreach module, $(MODULES), $(OBJDIR)/$(module).o)
 ELF=$(OBJDIR)/$(PROG).elf
 EEP=$(OBJDIR)/$(PROG).eep
 HEX=$(OBJDIR)/$(PROG).hex
@@ -132,6 +132,9 @@ upload-isp: $(EEP) $(HEX)
 	$(AVRDUDE) -C$(ARDUINO_HOME)/hardware/tools/avr/etc/avrdude.conf -v -p$(AVRDUDE_MCU) -cusbtiny -Uflash:w:$(HEX):i
 
 $(OBJDIR)/%.o: %.cpp
+	$(CPP) -c $(CPPFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
+
+$(OBJDIR)/%.o: %.cc
 	$(CPP) -c $(CPPFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
 
 $(OBJDIR)/%.o: %.c
