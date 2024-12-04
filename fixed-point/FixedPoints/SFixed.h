@@ -138,7 +138,7 @@ public:
 	static constexpr SFixed MinValue() { return fromInternal(FIXED_POINTS_DETAILS::MsbMask<InternalSize>::Value); }
 	static constexpr SFixed MaxValue() { return fromInternal(static_cast<SFixed::InternalType>(~FIXED_POINTS_DETAILS::MsbMask<InternalSize>::Value)); }
 
-	static constexpr SFixed Pi() { return 3.1415926535897932384626433832795028841971; }
+	static constexpr SFixed Pi() { return 3.141592653589793; }
 
 #if 0
 	// 40 digits is probably enough for these
