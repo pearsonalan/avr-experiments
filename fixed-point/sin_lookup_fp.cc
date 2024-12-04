@@ -38,7 +38,7 @@ fixed SinLookup(fixed x) {
     }
 }
 
-fixed SinLookupWithInterpolation(fixed x) {
+fixed _SinLookupWithInterpolation(fixed x) {
     fixed f = floorFixed(x);
     if (x - f >= 0.5) {
         // round up
@@ -55,6 +55,25 @@ fixed SinLookupWithInterpolation(fixed x) {
         }
         return SIN_LOOKUP[deg] + (x - f) * (SIN_LOOKUP[deg + 1] - SIN_LOOKUP[deg]);
     }
+}
+
+fixed SinLookupWithInterpolation(fixed x) {
+    while (x < -180) {
+        x += 180;
+    }
+    while (x > 180) {
+        x -= 180;
+    }
+    if (x < -90) {
+        return - _SinLookupWithInterpolation(x + 180);
+    }
+    if (x < 0) {
+        return - _SinLookupWithInterpolation(-x);
+    }
+    if (x > 90) {
+        return _SinLookupWithInterpolation(180 - x);
+    }
+    return _SinLookupWithInterpolation(x);
 }
 
 inline double ToRadians(double d) {
@@ -81,4 +100,16 @@ int main() {
     test(44.5);
     test(45.5);
     test(89.5);
+
+    test(0);
+    test(90);
+    test(180);
+    test(270);
+    test(360);
+
+    test(-45);
+    test(135);
+    test(-135);
+    test(720+45);
+    test(720+135);
 }
