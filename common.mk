@@ -6,7 +6,13 @@ ROOT_DIR := $(dir $(COMMON_MK_PATH))
 # $(info Path to common.mk = $(COMMON_MK_PATH))
 # $(info Root dir = $(ROOT_DIR))
 
+ifndef IDE
+  IDE=1
+endif
+
 include $(ROOT_DIR)/build/$(ARCH).mk
+
+$(info AVR_HOME is $(AVR_HOME))
 
 CPP=$(AVR_HOME)/bin/avr-g++
 CC=$(AVR_HOME)/bin/avr-gcc
@@ -49,16 +55,39 @@ endif
 CFLAGS=-g -Os -Wall -Wextra -ffunction-sections -fdata-sections -MMD -mmcu=$(MCU)
 CPPFLAGS=-g -Os -fno-exceptions -ffunction-sections -fdata-sections -fno-threadsafe-statics -MMD -mmcu=$(MCU)
 
-ARDUINO_SRC=$(ARDUINO_HOME)/hardware/arduino/avr/cores/arduino
+ifeq ($(IDE), 1)
+	ARDUINO_SRC=$(ARDUINO_HOME)/hardware/arduino/avr/cores/arduino
+    VARIANTS=$(ARDUINO_HOME)/hardware/arduino/avr/variants
+	SPI_SRC=$(ARDUINO_HOME)/hardware/arduino/avr/libraries/SPI/src
+else
+	ARDUINO_SRC=$(ARDUINO_HOME)/hardware/avr/1.8.6/cores/arduino
+	VARIANTS=$(ARDUINO_HOME)/hardware/avr/1.8.6/variants
+	WIRE_LIB=$(ARDUINO_HOME)/hardware/avr/1.8.6/libraries/Wire/src
+	SPI_SRC=$(ARDUINO_HOME)/hardware/avr/1.8.6/libraries/SPI/src
+endif
+
 LIB_SERVO_SRC=$(ARDUINO_HOME)/libraries/Servo/src/avr
-SPI_SRC=$(ARDUINO_HOME)/hardware/arduino/avr/libraries/SPI/src
+
+ADAFRUIT_BUSIO_LIB=$(ARDUINO_LIBRARIES)/Adafruit_BusIO
 
 INCLUDES=-I$(ARDUINO_SRC) \
-        -I$(ARDUINO_HOME)/hardware/arduino/avr/variants/standard \
-        -I$(ARDUINO_HOME)/libraries/Servo/src
+        -I$(VARIANTS)/standard \
+        -I$(ARDUINO_HOME)/libraries/Servo/src \
+		-I$(WIRE_LIB) \
+		-I$(ADAFRUIT_BUSIO_LIB) \
 
 ifdef SPI
 INCLUDES += -I$(SPI_SRC)
+endif
+
+ifdef ADAFRUIT_GFX
+ADAFRUIT_GFX_LIB=$(ARDUINO_LIBRARIES)/Adafruit_GFX_Library
+INCLUDES += -I$(ADAFRUIT_GFX_LIB)
+endif
+
+ifdef ADAFRUIT_TFTLCD
+ADAFRUIT_TFTLCD_LIB=$(ARDUINO_LIBRARIES)/Adafruit_TFTLCD_Library
+INCLUDES +=	-I$(ADAFRUIT_TFTLCD_LIB)
 endif
 
 OBJDIR=obj
@@ -70,10 +99,22 @@ CORE_OBJS= \
 	$(OBJDIR)/Print.o $(OBJDIR)/CDC.o $(OBJDIR)/IPAddress.o $(OBJDIR)/USBCore.o \
 	$(OBJDIR)/Tone.o $(OBJDIR)/WInterrupts.o $(OBJDIR)/WMath.o $(OBJDIR)/WString.o \
 	$(OBJDIR)/HardwareSerial.o $(OBJDIR)/HardwareSerial0.o $(OBJDIR)/HardwareSerial1.o \
-	$(OBJDIR)/HardwareSerial2.o $(OBJDIR)/HardwareSerial3.o $(OBJDIR)/Servo.o
+	$(OBJDIR)/HardwareSerial2.o $(OBJDIR)/HardwareSerial3.o
+
+ifdef SERVO
+CORE_OBJS += $(OBJDIR)/Servo.o
+endif
 
 ifdef SPI
 CORE_OBJS += $(OBJDIR)/SPI.o
+endif
+
+ifdef ADAFRUIT_GFX
+CORE_OBJS += $(OBJDIR)/Adafruit_GFX.o
+endif
+
+ifdef ADAFRUIT_TFTLCD
+CORE_OBJS += $(OBJDIR)/Adafruit_TFTLCD.o
 endif
 
 CORE_LIB=$(OBJDIR)/ArduinoCore.a
@@ -152,6 +193,15 @@ $(OBJDIR)/%.o: $(SPI_SRC)/%.cpp
 $(OBJDIR)/%.o: $(ARDUINO_SRC)/%.c
 	$(CC) -c $(CFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
 
+ifdef ADAFRUIT_GFX
+$(OBJDIR)/%.o: $(ADAFRUIT_GFX_LIB)/%.cpp
+	$(CPP) -c $(CPPFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
+endif
+
+ifdef ADAFRUIT_TFTLCD
+$(OBJDIR)/%.o: $(ADAFRUIT_TFTLCD_LIB)/%.cpp
+	$(CPP) -c $(CPPFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
+endif
 
 ######################################
 # Recurse into subdirectories
