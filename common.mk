@@ -73,8 +73,11 @@ ADAFRUIT_BUSIO_LIB=$(ARDUINO_LIBRARIES)/Adafruit_BusIO
 INCLUDES=-I$(ARDUINO_SRC) \
         -I$(VARIANTS)/standard \
         -I$(ARDUINO_HOME)/libraries/Servo/src \
-		-I$(WIRE_LIB) \
 		-I$(ADAFRUIT_BUSIO_LIB) \
+
+ifeq ($(IDE), 2)
+INCLUDES += -I$(WIRE_LIB)
+endif
 
 ifdef SPI
 INCLUDES += -I$(SPI_SRC)
