@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="bitmaps.js"></script>
+    <link rel="stylesheet" href="bitmaps.css" />
+  </head>
+  <body>
+    <div class="container">
+      <canvas id="attitudeIndicatorSrcCanvas" width="320" height="240"></canvas>
+      <canvas id="horizonSrcCanvas" width="320" height="240"></canvas>
+    </div>
+    <div class="container">
+      <canvas id="attitudeIndicatorCanvas" width="320" height="240"></canvas>
+      <canvas id="horizonCanvas" width="320" height="240"></canvas>
+      <canvas id="bitmaskOuterCanvas" width="320" height="240"></canvas>
+      <canvas id="bitmaskInnerCanvas" width="320" height="240"></canvas>
+    </div>
+    <div class="container">
+      <canvas id="compositedCanvas" width="320" height="240"></canvas>
+    </div>
+    <div class="attitude">
+      <div>Pitch: <span id="pitchSpan">0</span></div>
+      <div>Roll: <span id="rollSpan">0</span></div>
+    </div>
+  </body>
+</html>
