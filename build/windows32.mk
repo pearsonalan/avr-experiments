@@ -37,4 +37,5 @@ ifeq ($(IDE), 1)
 else
   ARDUINO_TOOLS=$(ARDUINO_HOME)/tools
   AVR_HOME=$(ARDUINO_TOOLS)/avr-gcc/7.3.0-atmel3.6.1-arduino7
+  ARDUINO_LIBRARIES=$(USERPROFILE)/OneDrive/Documents/Arduino/libraries
 endif
