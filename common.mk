@@ -7,7 +7,7 @@ ROOT_DIR := $(dir $(COMMON_MK_PATH))
 # $(info Root dir = $(ROOT_DIR))
 
 ifndef IDE
-  IDE=1
+  IDE=2
 endif
 
 include $(ROOT_DIR)/build/$(ARCH).mk
