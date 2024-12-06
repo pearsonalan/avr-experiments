@@ -3,7 +3,7 @@ PROG=redraw
 
 IDE=2
 
-PORT=/dev/cu.usbmodem14101
+PORT=/dev/cu.usbmodem1411101
 BAUD=115200
 
 SPI=1
