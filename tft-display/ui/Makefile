@@ -1,9 +1,10 @@
 PROG=tft-ui
 HTML=README.html
 
-IDE=2
+ifndef PORT
+  PORT=/dev/cu.usbmodem141101
+endif
 
-PORT=/dev/cu.usbmodem1411101
 BAUD=115200
 
 SPI=1
