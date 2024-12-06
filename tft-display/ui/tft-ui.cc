@@ -22,9 +22,26 @@ public:
   virtual ~Event() = default;
 };
 
+enum class TouchEventType {
+  None = 0,
+  Begin = 1,
+  Drag = 2,
+  End = 3,
+};
+
 class TouchEvent : public Event {
 public:
   ~TouchEvent() override = default;
+
+  TouchEventType type() const { return type_; }
+  void setType(TouchEventType type) { type_ = type; }
+
+  const TS_Point& point() const { return point_; }
+  void setPoint(const TS_Point& p) { point_ = p; }
+
+protected:
+  TouchEventType type_ = TouchEventType::None;
+  TS_Point point_;
 };
 
 class Window {
@@ -200,9 +217,6 @@ public:
 };
 
 void SmoothLabel::Draw(Adafruit_GFX* gfx) {
-  Serial.print("Drawing SmoothLabel@");
-  Serial.println((unsigned long)(void*)this, HEX);
-
   for (int y = 0; y < cy(); y++) {
     GFXcanvas16 canvas(cx(), 1);
     canvas.fillScreen(bg_);
@@ -269,7 +283,6 @@ void setup() {
   tft.fillScreen(BLACK);
   Serial.print(F("CLRSCR took "));
   Serial.println(micros() - start);
-
 }
 
 void DispatchProc(Window* mainWindow) {
@@ -279,6 +292,21 @@ void DispatchProc(Window* mainWindow) {
   }
 }
 
+void PrintPoint(const TS_Point& p) {
+  Serial.print("(");
+  Serial.print(p.x);
+  Serial.print(",");
+  Serial.print(p.y);
+  Serial.print(")");
+}
+
+void RotateTouchPoint(TS_Point* p, uint8_t r) {
+  uint16_t x, y;
+  x = 320 - p->y;
+  y = p->x;
+  p->x = x;
+  p->y = y;
+}
 
 int main() {
   init();
@@ -289,10 +317,10 @@ int main() {
   while (!Serial) delay(10);
 
   Panel panel(10, 10, tft.width(), tft.height());
-  Label lbl(70, 80, 170, 15, "HELLO, WORLD!!", WHITE, 0xCE79, 2);
-  Label lbl2(100, 120, 100, 10, "Isn't this cool", RED);
-  Label lbl3(10, 220, 100, 10, "Current Time:", BLUE);
-  TimeLabel time(120, 220, 100, 10, "");
+  Label lbl(170, 10, 90, 15, "UI Demo", WHITE, 0xCE79, 2);
+  Label lbl2(170, 30, 100, 10, "Isn't this cool", RED);
+  Label lbl3(10, 220, 110, 10, "Seconds since start:", BLUE);
+  TimeLabel time(140, 220, 100, 10, "");
 
   panel.AddChild(&lbl);
   panel.AddChild(&lbl2);
@@ -304,7 +332,38 @@ int main() {
 
   setup();
 
+  bool is_touched = false;
+  TS_Point last(0,0,0);
+
   for (;;) {
+    TS_Point p(0,0,0);
+
+    if (ts.touched()) {
+      p = ts.getPoint();
+      RotateTouchPoint(&p, 3);
+    }
+
+    if (ts.touched()) {
+      if (is_touched) {
+        if (p != last) {
+          Serial.print("DRAG TO ");
+          PrintPoint(p);
+          Serial.println();
+        }
+      } else {
+        Serial.print("TOUCH AT ");
+        PrintPoint(p);
+        Serial.println();
+      }
+      is_touched = true;
+    } else {
+      if (is_touched) {
+        Serial.println("TOUCH END");
+      }
+      is_touched = false;
+    }
+    last = p;
+
     DispatchProc(&panel);
   }
 }
