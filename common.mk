@@ -64,12 +64,12 @@ CPPFLAGS=-g -Os -fno-exceptions -ffunction-sections -fdata-sections -fno-threads
 
 ifeq ($(IDE), 1)
 	ARDUINO_SRC=$(ARDUINO_HOME)/hardware/arduino/avr/cores/arduino
-    VARIANTS=$(ARDUINO_HOME)/hardware/arduino/avr/variants
+  VARIANTS=$(ARDUINO_HOME)/hardware/arduino/avr/variants
 	SPI_SRC=$(ARDUINO_HOME)/hardware/arduino/avr/libraries/SPI/src
 else
 	ARDUINO_SRC=$(ARDUINO_HOME)/hardware/avr/1.8.6/cores/arduino
 	VARIANTS=$(ARDUINO_HOME)/hardware/avr/1.8.6/variants
-	WIRE_LIB=$(ARDUINO_HOME)/hardware/avr/1.8.6/libraries/Wire/src
+	WIRE_SRC=$(ARDUINO_HOME)/hardware/avr/1.8.6/libraries/Wire/src
 	SPI_SRC=$(ARDUINO_HOME)/hardware/avr/1.8.6/libraries/SPI/src
 endif
 
@@ -80,10 +80,10 @@ ADAFRUIT_BUSIO_LIB=$(ARDUINO_LIBRARIES)/Adafruit_BusIO
 INCLUDES=-I$(ARDUINO_SRC) \
         -I$(VARIANTS)/standard \
         -I$(ARDUINO_HOME)/libraries/Servo/src \
-		-I$(ADAFRUIT_BUSIO_LIB) \
+		    -I$(ADAFRUIT_BUSIO_LIB) \
 
 ifeq ($(IDE), 2)
-INCLUDES += -I$(WIRE_LIB)
+INCLUDES += -I$(WIRE_SRC)
 endif
 
 ifdef SPI
@@ -98,6 +98,16 @@ endif
 ifdef ADAFRUIT_TFTLCD
 ADAFRUIT_TFTLCD_LIB=$(ARDUINO_LIBRARIES)/Adafruit_TFTLCD_Library
 INCLUDES +=	-I$(ADAFRUIT_TFTLCD_LIB)
+endif
+
+ifdef ADAFRUIT_TFTLCD
+ADAFRUIT_FT6206_LIB=$(ARDUINO_LIBRARIES)/Adafruit_FT6206_Library
+INCLUDES +=	-I$(ADAFRUIT_FT6206_LIB)
+endif
+
+ifdef ADAFRUIT_TFTLCD
+ADAFRUIT_BUSIO_LIB=$(ARDUINO_LIBRARIES)/Adafruit_BusIO
+INCLUDES +=	-I$(ADAFRUIT_BUSIO_LIB)
 endif
 
 OBJDIR=obj
@@ -119,12 +129,24 @@ ifdef SPI
 CORE_OBJS += $(OBJDIR)/SPI.o
 endif
 
+ifdef WIRE
+CORE_OBJS += $(OBJDIR)/twi.o $(OBJDIR)/Wire.o
+endif
+
 ifdef ADAFRUIT_GFX
 CORE_OBJS += $(OBJDIR)/Adafruit_GFX.o
 endif
 
 ifdef ADAFRUIT_TFTLCD
 CORE_OBJS += $(OBJDIR)/Adafruit_TFTLCD.o
+endif
+
+ifdef ADAFRUIT_FT6206
+CORE_OBJS += $(OBJDIR)/Adafruit_FT6206.o
+endif
+
+ifdef ADAFRUIT_BUSIO
+CORE_OBJS += $(OBJDIR)/Adafruit_I2CDevice.o $(OBJDIR)/Adafruit_BusIO_Register.o
 endif
 
 CORE_LIB=$(OBJDIR)/ArduinoCore.a
@@ -211,6 +233,24 @@ endif
 ifdef ADAFRUIT_TFTLCD
 $(OBJDIR)/%.o: $(ADAFRUIT_TFTLCD_LIB)/%.cpp
 	$(CPP) -c $(CPPFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
+endif
+
+ifdef ADAFRUIT_FT6206
+$(OBJDIR)/%.o: $(ADAFRUIT_FT6206_LIB)/%.cpp
+	$(CPP) -c $(CPPFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
+endif
+
+ifdef ADAFRUIT_BUSIO
+$(OBJDIR)/%.o: $(ADAFRUIT_BUSIO_LIB)/%.cpp
+	$(CPP) -c $(CPPFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
+endif
+
+ifdef WIRE
+$(OBJDIR)/%.o: $(WIRE_SRC)/%.cpp
+	$(CPP) -c $(CPPFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
+
+$(OBJDIR)/%.o: $(WIRE_SRC)/utility/%.c
+	$(CC) -c $(CFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
 endif
 
 ######################################
