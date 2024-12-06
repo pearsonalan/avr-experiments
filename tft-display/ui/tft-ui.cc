@@ -157,7 +157,20 @@ protected:
 };
 
 void Button::Draw(Adafruit_GFX* gfx) {
-  gfx->fillRect(x(), y(), cx(), cy(), BLUE);
+  gfx->fillRect(x(), y(), cx(), cy(), 0xEF5D);
+
+  gfx->drawFastHLine(x(), y(), cx(), 0xF7BE);
+  gfx->drawFastHLine(x(), y() + 1, cx(), 0xF7BE);
+  
+  gfx->drawFastVLine(x(), y(), cy(), 0xF7BE);
+  gfx->drawFastVLine(x() + 1, y(), cy(), 0xF7BE);
+
+  gfx->drawFastHLine(x(), y() + cy() - 1, cx(), 0xBDF7);
+  gfx->drawFastHLine(x(), y() + cy() - 2, cx(), 0xBDF7);
+
+  gfx->drawFastVLine(x() + cx() - 1, y(), cy(), 0xBDF7);
+  gfx->drawFastVLine(x() + cx() - 2, y(), cy(), 0xBDF7);
+
   int16_t tx, ty;
   uint16_t bx, by;
   gfx->getTextBounds(getText(), x(), y(), &tx, &ty, &bx, &by);
@@ -327,8 +340,11 @@ int main() {
   panel.AddChild(&lbl3);
   panel.AddChild(&time);
 
-  Button button(1, 1, 80, 40, "Hello");
-  panel.AddChild(&button);
+  Button button1(3, 3, 80, 40, "Button 1");
+  panel.AddChild(&button1);
+
+  Button button2(3, 53, 80, 40, "Button 2");
+  panel.AddChild(&button2);
 
   setup();
 
@@ -343,6 +359,7 @@ int main() {
       RotateTouchPoint(&p, 3);
     }
 
+    TouchEvent event;
     if (ts.touched()) {
       if (is_touched) {
         if (p != last) {
