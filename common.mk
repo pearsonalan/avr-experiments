@@ -18,9 +18,16 @@ CPP=$(AVR_HOME)/bin/avr-g++
 CC=$(AVR_HOME)/bin/avr-gcc
 AR=$(AVR_HOME)/bin/avr-ar
 OBJCOPY=$(AVR_HOME)/bin/avr-objcopy
-AVRDUDE=$(AVR_HOME)/bin/avrdude
 AVRSIZE=$(AVR_HOME)/bin/avr-size
 AVRA=/usr/local/bin/avra
+
+ifeq ($(IDE), 1)
+	AVRDUDE=$(AVR_HOME)/bin/avrdude
+	AVRDUDE_CONF=$(ARDUINO_HOME)/hardware/tools/avr/etc/avrdude.conf
+else
+	AVRDUDE=$(ARDUINO_TOOLS)/avrdude/6.3.0-arduino17/bin/avrdude
+	AVRDUDE_CONF=$(ARDUINO_TOOLS)/avrdude/6.3.0-arduino17/etc/avrdude.conf
+endif
 
 # Default to using the ATmega328P if no other MCU is specified
 ifndef MCU
@@ -170,10 +177,10 @@ $(HEX): $(ELF)
 	$(OBJCOPY) -O ihex -R .eeprom $(ELF) $(HEX)
 
 upload: $(EEP) $(HEX)
-	$(AVRDUDE) -C$(ARDUINO_HOME)/hardware/tools/avr/etc/avrdude.conf -v -p$(AVRDUDE_MCU) -carduino -P$(PORT) -b$(BAUD) -D -Uflash:w:$(HEX):i
+	$(AVRDUDE) -C$(AVRDUDE_CONF) -v -p$(AVRDUDE_MCU) -carduino -P$(PORT) -b$(BAUD) -D -Uflash:w:$(HEX):i
 
 upload-isp: $(EEP) $(HEX)
-	$(AVRDUDE) -C$(ARDUINO_HOME)/hardware/tools/avr/etc/avrdude.conf -v -p$(AVRDUDE_MCU) -cusbtiny -Uflash:w:$(HEX):i
+	$(AVRDUDE) -C$(AVRDUDE_CONF) -v -p$(AVRDUDE_MCU) -cusbtiny -Uflash:w:$(HEX):i
 
 $(OBJDIR)/%.o: %.cpp
 	$(CPP) -c $(CPPFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
