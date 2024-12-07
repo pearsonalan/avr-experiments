@@ -2,7 +2,7 @@ PROG=tft-ui
 HTML=README.html
 
 ifndef PORT
-  PORT=/dev/cu.usbmodem141101
+  PORT=/dev/cu.usbmodem1411101
 endif
 
 BAUD=115200
