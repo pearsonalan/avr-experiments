@@ -1,4 +1,5 @@
 PROG=tft-ui
+MODULES=ui
 HTML=README.html
 
 ifndef PORT
