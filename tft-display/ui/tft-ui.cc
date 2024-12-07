@@ -2,7 +2,6 @@
 #include <Adafruit_TFTLCD.h> // Hardware-specific library
 #include <Adafruit_FT6206.h> // Touch Screen Library
 
-
 #define LCD_CS A3 // Chip Select goes to Analog 3
 #define LCD_CD A2 // Command/Data goes to Analog 2
 #define LCD_WR A1 // LCD Write goes to Analog 1
@@ -16,6 +15,14 @@
 
 Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
 Adafruit_FT6206 ts;
+
+void PrintPoint(const TS_Point& p) {
+  Serial.print("(");
+  Serial.print(p.x);
+  Serial.print(",");
+  Serial.print(p.y);
+  Serial.print(")");
+}
 
 class Event {
 public:
@@ -31,13 +38,11 @@ enum class TouchEventType {
 
 class TouchEvent : public Event {
 public:
+  TouchEvent(TouchEventType type, const TS_Point& p) : type_(type), point_(p) {}
   ~TouchEvent() override = default;
 
   TouchEventType type() const { return type_; }
-  void setType(TouchEventType type) { type_ = type; }
-
   const TS_Point& point() const { return point_; }
-  void setPoint(const TS_Point& p) { point_ = p; }
 
 protected:
   TouchEventType type_ = TouchEventType::None;
@@ -61,7 +66,9 @@ public:
     Validate();
   } 
 
-  virtual void onTouch(const TouchEvent& event) = 0;
+  // Return true if the touch event was handled, else false.
+  virtual bool onTouch(const TouchEvent& event) = 0;
+
   virtual bool NeedsRefresh() const {
     // Default behavior is that we only need refresh if invalid.
     return !isValid();
@@ -81,6 +88,13 @@ public:
   bool isValid() const { return is_valid_; }
   void Invalidate() { is_valid_ = false; }
   void Validate() { is_valid_ = true; }
+
+  bool PointInWindow(const TS_Point& p) {
+    return (p.x >= x_ &&
+            p.x <= x_ + cx_ &&
+            p.y >= y_ &&
+            p.y <= y_ + cy_);
+  }
 
 protected:
   int x_;
@@ -103,7 +117,7 @@ public:
   void Update() override;
   void Draw(Adafruit_GFX* gfx) override;
 
-  void onTouch(const TouchEvent& event) override {}
+  bool onTouch(const TouchEvent& event) override;
   bool NeedsRefresh() const override { return true; } 
 
   void AddChild(Window* w);
@@ -125,6 +139,19 @@ void Panel::AddChild(Window* w) {
   }
 }
 
+bool Panel::onTouch(const TouchEvent& event) {
+  if (!PointInWindow(event.point())) {
+    return false;
+  }
+
+  for (Window* w = first_child_; w != nullptr; w = w->nextSibling()) {
+    if (w->onTouch(event)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void Panel::Update() {
   for (Window* w = first_child_; w != nullptr; w = w->nextSibling()) {
     w->Update();
@@ -141,19 +168,22 @@ void Panel::Draw(Adafruit_GFX* gfx) {
   Window::Draw(gfx);
 }
 
+typedef void (*callbackFuncPtr)(void);
+
 class Button : public Window {
 public:
-  Button(int x, int y, int cx, int cy, const char* text)
-      : Window(x, y, cx, cy), text_(text) {}
+  Button(int x, int y, int cx, int cy, const char* text, volatile callbackFuncPtr callback)
+      : Window(x, y, cx, cy), text_(text), cb_(callback) {}
   ~Button() override = default;
 
   void Draw(Adafruit_GFX* gfx) override;
-  void onTouch(const TouchEvent& event) override {}
+  bool onTouch(const TouchEvent& event) override;
 
   const char* getText() const { return text_; }
 
 protected:
   const char* text_;
+  volatile callbackFuncPtr cb_;
 };
 
 void Button::Draw(Adafruit_GFX* gfx) {
@@ -184,6 +214,20 @@ void Button::Draw(Adafruit_GFX* gfx) {
   Window::Draw(gfx);
 }
 
+bool Button::onTouch(const TouchEvent& event) {
+  if (PointInWindow(event.point())) {
+    if (event.type() == TouchEventType::End) {
+      Serial.print("Button Press: ");
+      Serial.println(getText());
+      if (cb_ != nullptr) {
+        cb_();
+      }
+    }
+    return true;
+  }
+  return false;
+}
+
 class Label : public Window {
 public:
   Label(int x, int y, int cx, int cy, const char* text,
@@ -192,7 +236,7 @@ public:
   ~Label() override = default;
 
   void Draw(Adafruit_GFX* gfx) override;
-  void onTouch(const TouchEvent& event) override {}
+  bool onTouch(const TouchEvent& event) override { return false; }
 
   const char* getText() const { return text_; }
   void setText(const char* text) {
@@ -305,14 +349,6 @@ void DispatchProc(Window* mainWindow) {
   }
 }
 
-void PrintPoint(const TS_Point& p) {
-  Serial.print("(");
-  Serial.print(p.x);
-  Serial.print(",");
-  Serial.print(p.y);
-  Serial.print(")");
-}
-
 void RotateTouchPoint(TS_Point* p, uint8_t r) {
   uint16_t x, y;
   x = 320 - p->y;
@@ -329,7 +365,7 @@ int main() {
   Serial.begin(115200);
   while (!Serial) delay(10);
 
-  Panel panel(10, 10, tft.width(), tft.height());
+  Panel panel(1, 1, tft.width(), tft.height());
   Label lbl(170, 10, 90, 15, "UI Demo", WHITE, 0xCE79, 2);
   Label lbl2(170, 30, 100, 10, "Isn't this cool", RED);
   Label lbl3(10, 220, 110, 10, "Seconds since start:", BLUE);
@@ -340,10 +376,14 @@ int main() {
   panel.AddChild(&lbl3);
   panel.AddChild(&time);
 
-  Button button1(3, 3, 80, 40, "Button 1");
+  Button button1(3, 3, 80, 40, "Button 1", [] {
+    Serial.println("Button 1 is pressed!");
+  });
   panel.AddChild(&button1);
 
-  Button button2(3, 53, 80, 40, "Button 2");
+  Button button2(3, 53, 80, 40, "Button 2", [] {
+    Serial.println("Button 2 is pressed!");
+  });
   panel.AddChild(&button2);
 
   setup();
@@ -359,7 +399,6 @@ int main() {
       RotateTouchPoint(&p, 3);
     }
 
-    TouchEvent event;
     if (ts.touched()) {
       if (is_touched) {
         if (p != last) {
@@ -376,6 +415,8 @@ int main() {
     } else {
       if (is_touched) {
         Serial.println("TOUCH END");
+        TouchEvent event(TouchEventType::End, last);
+        panel.onTouch(event);
       }
       is_touched = false;
     }
