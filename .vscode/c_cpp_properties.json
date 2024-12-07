@@ -20,6 +20,7 @@
             "name": "Arduino",
             "includePath": [
                 "${workspaceFolder}/**",
+                "/Users/alanpearson/Documents/Arduino/libraries/**",
                 "C:/Arduino/hardware/tools/avr/avr/include/**",
                 "C:/Arduino/hardware/arduino/avr/cores/arduino",
                 "C:/Arduino/hardware/arduino/avr/variants/standard",

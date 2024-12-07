@@ -168,22 +168,21 @@ void Panel::Draw(Adafruit_GFX* gfx) {
   Window::Draw(gfx);
 }
 
-typedef void (*callbackFuncPtr)(void);
-
 class Button : public Window {
 public:
-  Button(int x, int y, int cx, int cy, const char* text, volatile callbackFuncPtr callback)
-      : Window(x, y, cx, cy), text_(text), cb_(callback) {}
+  Button(int x, int y, int cx, int cy, const char* text)
+      : Window(x, y, cx, cy), text_(text) {}
   ~Button() override = default;
 
   void Draw(Adafruit_GFX* gfx) override;
   bool onTouch(const TouchEvent& event) override;
 
+  virtual void onPress(const TouchEvent& event) {}
+
   const char* getText() const { return text_; }
 
 protected:
   const char* text_;
-  volatile callbackFuncPtr cb_;
 };
 
 void Button::Draw(Adafruit_GFX* gfx) {
@@ -209,6 +208,7 @@ void Button::Draw(Adafruit_GFX* gfx) {
   Serial.print(",");
   Serial.println(by);
   gfx->setTextColor(WHITE);
+  gfx->setTextSize(1);
   gfx->setCursor(x() + (cx() - bx) / 2, y() + (cy() - by) / 2);
   gfx->print(getText());
   Window::Draw(gfx);
@@ -219,9 +219,7 @@ bool Button::onTouch(const TouchEvent& event) {
     if (event.type() == TouchEventType::End) {
       Serial.print("Button Press: ");
       Serial.println(getText());
-      if (cb_ != nullptr) {
-        cb_();
-      }
+      onPress(event);
     }
     return true;
   }
@@ -369,21 +367,34 @@ int main() {
   Label lbl(170, 10, 90, 15, "UI Demo", WHITE, 0xCE79, 2);
   Label lbl2(170, 30, 100, 10, "Isn't this cool", RED);
   Label lbl3(10, 220, 110, 10, "Seconds since start:", BLUE);
+  Label output(40, 180, 240, 30, "", WHITE, BLACK, 3);
   TimeLabel time(140, 220, 100, 10, "");
 
   panel.AddChild(&lbl);
   panel.AddChild(&lbl2);
   panel.AddChild(&lbl3);
+  panel.AddChild(&output);
   panel.AddChild(&time);
 
-  Button button1(3, 3, 80, 40, "Button 1", [] {
-    Serial.println("Button 1 is pressed!");
-  });
+
+  class OutputButton : public Button {
+  public:
+    OutputButton(int x, int y, int cx, int cy, const char* text, Label* output_label) :
+      Button(x, y, cx, cy, text), output_label_(output_label) {}
+    void onPress(const TouchEvent&) {
+      String s = "Button ";
+      s += getText();
+      s += " pressed";
+      output_label_->setText(s.c_str());
+    }
+  protected:
+    Label* const output_label_;
+  };
+
+  OutputButton button1(3, 3, 80, 40, "Button 1", &output);
   panel.AddChild(&button1);
 
-  Button button2(3, 53, 80, 40, "Button 2", [] {
-    Serial.println("Button 2 is pressed!");
-  });
+  OutputButton button2(3, 53, 80, 40, "Button 2", &output);
   panel.AddChild(&button2);
 
   setup();
