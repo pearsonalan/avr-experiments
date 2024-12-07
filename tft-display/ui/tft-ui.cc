@@ -179,10 +179,10 @@ public:
 
   virtual void onPress(const TouchEvent& event) {}
 
-  const char* getText() const { return text_; }
+  const String& getText() const { return text_; }
 
 protected:
-  const char* text_;
+  String text_;
 };
 
 void Button::Draw(Adafruit_GFX* gfx) {
@@ -202,13 +202,13 @@ void Button::Draw(Adafruit_GFX* gfx) {
 
   int16_t tx, ty;
   uint16_t bx, by;
+  gfx->setTextColor(WHITE);
+  gfx->setTextSize(1);
   gfx->getTextBounds(getText(), x(), y(), &tx, &ty, &bx, &by);
   Serial.print("TEXT BOUNDS: ");
   Serial.print(bx);
   Serial.print(",");
   Serial.println(by);
-  gfx->setTextColor(WHITE);
-  gfx->setTextSize(1);
   gfx->setCursor(x() + (cx() - bx) / 2, y() + (cy() - by) / 2);
   gfx->print(getText());
   Window::Draw(gfx);
@@ -228,7 +228,7 @@ bool Button::onTouch(const TouchEvent& event) {
 
 class Label : public Window {
 public:
-  Label(int x, int y, int cx, int cy, const char* text,
+  Label(int x, int y, int cx, int cy, const String& text,
         int16_t fg=WHITE, int16_t bg=BLACK, int size=1)
       : Window(x, y, cx, cy), text_(text), fg_(fg), bg_(bg), size_(size) {}
   ~Label() override = default;
@@ -236,14 +236,14 @@ public:
   void Draw(Adafruit_GFX* gfx) override;
   bool onTouch(const TouchEvent& event) override { return false; }
 
-  const char* getText() const { return text_; }
-  void setText(const char* text) {
+  const String& getText() const { return text_; }
+  void setText(const String& text) {
     text_ = text;
     Invalidate();
   }
 
 protected:
-  const char* text_;
+  String text_;
   int16_t fg_ = WHITE;
   int16_t bg_ = BLACK;
   int size_ = 1;
@@ -263,7 +263,7 @@ void Label::Draw(Adafruit_GFX* gfx) {
 
 class SmoothLabel : public Label {
 public:
-  SmoothLabel(int x, int y, int cx, int cy, const char* text,
+  SmoothLabel(int x, int y, int cx, int cy, const String& text,
         int16_t fg=WHITE, int16_t bg=BLACK, int size=1)
       : Label(x, y, cx, cy, text, fg, bg, size) {}
   ~SmoothLabel() override = default;
@@ -287,7 +287,7 @@ void SmoothLabel::Draw(Adafruit_GFX* gfx) {
 
 class TimeLabel : public SmoothLabel {
 public:
-  TimeLabel(int x, int y, int cx, int cy, const char* text,
+  TimeLabel(int x, int y, int cx, int cy, const String& text,
             int16_t fg=WHITE, int16_t bg=BLACK, int size=1)
       : SmoothLabel(x, y, cx, cy, text, fg, bg, size) {}
   ~TimeLabel() override = default;
@@ -367,7 +367,7 @@ int main() {
   Label lbl(170, 10, 90, 15, "UI Demo", WHITE, 0xCE79, 2);
   Label lbl2(170, 30, 100, 10, "Isn't this cool", RED);
   Label lbl3(10, 220, 110, 10, "Seconds since start:", BLUE);
-  Label output(40, 180, 240, 30, "", WHITE, BLACK, 3);
+  Label output(40, 180, 240, 30, "", WHITE, BLACK, 2);
   TimeLabel time(140, 220, 100, 10, "");
 
   panel.AddChild(&lbl);
@@ -381,9 +381,9 @@ int main() {
   public:
     OutputButton(int x, int y, int cx, int cy, const char* text, Label* output_label) :
       Button(x, y, cx, cy, text), output_label_(output_label) {}
-    void onPress(const TouchEvent&) {
-      String s = "Button ";
-      s += getText();
+    void onPress(const TouchEvent&) override {
+      Serial.println("In OutputButton::onPress");
+      String s = getText();
       s += " pressed";
       output_label_->setText(s.c_str());
     }
