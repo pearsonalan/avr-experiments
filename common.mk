@@ -46,6 +46,14 @@ ifeq ($(MCU), atmega328p)
   DEFINES := -DARDUINO_AVR_UNO -DARDUINO_ARCH_AVR
 endif
 
+ifeq ($(MCU), atmega328)
+  $(info Building for ATmega644pa)
+  AVRDUDE_MCU=atmega328
+  ifndef F_CPU
+    F_CPU=1000000L
+  endif
+endif
+
 ifeq ($(MCU), atmega644pa)
   $(info Building for ATmega644pa)
   AVRDUDE_MCU=m644p
