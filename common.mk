@@ -110,6 +110,11 @@ ADAFRUIT_BUSIO_LIB=$(ARDUINO_LIBRARIES)/Adafruit_BusIO
 INCLUDES +=	-I$(ADAFRUIT_BUSIO_LIB)
 endif
 
+ifdef FIXED_POINT_LIB
+INCLUDES += -I$(ROOT_DIR)/fixed-point/lib
+endif
+
+
 OBJDIR=obj
 
 CORE_OBJS= \
@@ -157,12 +162,12 @@ ARDUINO_MAIN_LIB=$(OBJDIR)/ArduinoMain.a
 
 LIBS =
 
-ifndef NO_CORE_LIB
-LIBS += $(CORE_LIB)
-endif
-
 ifndef NO_ARDUINO_MAIN
 LIBS += $(ARDUINO_MAIN_LIB)
+endif
+
+ifndef NO_CORE_LIB
+LIBS += $(CORE_LIB)
 endif
 
 OBJS=$(OBJDIR)/$(PROG).o $(foreach module, $(MODULES), $(OBJDIR)/$(module).o)
