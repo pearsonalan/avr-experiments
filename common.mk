@@ -122,6 +122,10 @@ ifdef FIXED_POINT_LIB
 INCLUDES += -I$(ROOT_DIR)/fixed-point/lib
 endif
 
+ifdef UI_LIB
+INCLUDES += -I$(ROOT_DIR)/tft-display/ui-lib
+endif
+
 
 OBJDIR=obj
 
@@ -182,6 +186,10 @@ OBJS=$(OBJDIR)/$(PROG).o $(foreach module, $(MODULES), $(OBJDIR)/$(module).o)
 ELF=$(OBJDIR)/$(PROG).elf
 EEP=$(OBJDIR)/$(PROG).eep
 HEX=$(OBJDIR)/$(PROG).hex
+
+ifdef UI_LIB
+OBJS += $(OBJDIR)/ui.o
+endif
 
 # PANDOC_TITLE_FLAG=--metadata title="Electronics Notebook - $(@B)"
 PANDOC_TITLE_FLAG=
@@ -265,6 +273,12 @@ $(OBJDIR)/%.o: $(WIRE_SRC)/%.cpp
 $(OBJDIR)/%.o: $(WIRE_SRC)/utility/%.c
 	$(CC) -c $(CFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
 endif
+
+ifdef UI_LIB
+$(OBJDIR)/ui.o: $(ROOT_DIR)/tft-display/ui-lib/ui.cc
+	$(CPP) -c $(CPPFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
+endif
+
 
 ######################################
 # Recurse into subdirectories
