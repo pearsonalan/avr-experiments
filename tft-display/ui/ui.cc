@@ -74,10 +74,6 @@ void Button::Draw(Adafruit_GFX* gfx) {
   gfx->setTextColor(WHITE);
   gfx->setTextSize(1);
   gfx->getTextBounds(getText(), x(), y(), &tx, &ty, &bx, &by);
-  Serial.print("TEXT BOUNDS: ");
-  Serial.print(bx);
-  Serial.print(",");
-  Serial.println(by);
   gfx->setCursor(x() + (cx() - bx) / 2, y() + (cy() - by) / 2);
   gfx->print(getText());
   Window::Draw(gfx);
@@ -86,8 +82,6 @@ void Button::Draw(Adafruit_GFX* gfx) {
 bool Button::onTouch(const TouchEvent& event) {
   if (PointInWindow(event.point())) {
     if (event.type() == TouchEventType::End) {
-      Serial.print("Button Press: ");
-      Serial.println(getText());
       onPress(event);
     }
     return true;
@@ -96,9 +90,6 @@ bool Button::onTouch(const TouchEvent& event) {
 }
 
 void Label::Draw(Adafruit_GFX* gfx) {
-  Serial.print("Drawing Label@");
-  Serial.println((unsigned long)(void*)this, HEX);
-
   gfx->fillRect(x(), y(), cx(), cy(), bg_);
   gfx->setCursor(x(), y());
   gfx->setTextColor(fg_);

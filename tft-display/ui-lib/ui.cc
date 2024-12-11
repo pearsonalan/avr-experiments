@@ -74,10 +74,6 @@ void Button::Draw(Adafruit_GFX* gfx) {
   gfx->setTextColor(WHITE);
   gfx->setTextSize(1);
   gfx->getTextBounds(getText(), x(), y(), &tx, &ty, &bx, &by);
-  Serial.print("TEXT BOUNDS: ");
-  Serial.print(bx);
-  Serial.print(",");
-  Serial.println(by);
   gfx->setCursor(x() + (cx() - bx) / 2, y() + (cy() - by) / 2);
   gfx->print(getText());
   Window::Draw(gfx);
@@ -86,7 +82,7 @@ void Button::Draw(Adafruit_GFX* gfx) {
 bool Button::onTouch(const TouchEvent& event) {
   if (PointInWindow(event.point())) {
     if (event.type() == TouchEventType::End) {
-      Serial.print("Button Press: ");
+      Serial.print(F("Button Press: "));
       Serial.println(getText());
       onPress(event);
     }
@@ -96,9 +92,6 @@ bool Button::onTouch(const TouchEvent& event) {
 }
 
 void Label::Draw(Adafruit_GFX* gfx) {
-  Serial.print("Drawing Label@");
-  Serial.println((unsigned long)(void*)this, HEX);
-
   gfx->fillRect(x(), y(), cx(), cy(), bg_);
   gfx->setCursor(x(), y());
   gfx->setTextColor(fg_);
@@ -151,19 +144,19 @@ void UILoop(Adafruit_GFX* gfx, Adafruit_FT6206* ts, Window* main_window) {
     if (ts->touched()) {
       if (is_touched) {
         if (p != last) {
-          Serial.print("DRAG TO ");
+          Serial.print(F("DRAG TO "));
           PrintPoint(p);
           Serial.println();
         }
       } else {
-        Serial.print("TOUCH AT ");
+        Serial.print(F("TOUCH AT "));
         PrintPoint(p);
         Serial.println();
       }
       is_touched = true;
     } else {
       if (is_touched) {
-        Serial.println("TOUCH END");
+        Serial.println(F("TOUCH END"));
         TouchEvent event(TouchEventType::End, last);
         main_window->onTouch(event);
       }
