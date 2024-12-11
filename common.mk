@@ -122,6 +122,10 @@ ifdef FIXED_POINT_LIB
 INCLUDES += -I$(ROOT_DIR)/fixed-point/lib
 endif
 
+ifdef AFFINE_LIB
+INCLUDES += -I$(ROOT_DIR)/affine
+endif
+
 ifdef UI_LIB
 INCLUDES += -I$(ROOT_DIR)/tft-display/ui-lib
 endif
@@ -186,6 +190,14 @@ OBJS=$(OBJDIR)/$(PROG).o $(foreach module, $(MODULES), $(OBJDIR)/$(module).o)
 ELF=$(OBJDIR)/$(PROG).elf
 EEP=$(OBJDIR)/$(PROG).eep
 HEX=$(OBJDIR)/$(PROG).hex
+
+ifdef AFFINE_LIB
+OBJS += $(OBJDIR)/affine.o
+endif
+
+ifdef FIXED_POINT_LIB
+OBJS += $(OBJDIR)/TrigLookup.o
+endif
 
 ifdef UI_LIB
 OBJS += $(OBJDIR)/ui.o
@@ -274,11 +286,20 @@ $(OBJDIR)/%.o: $(WIRE_SRC)/utility/%.c
 	$(CC) -c $(CFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
 endif
 
+ifdef AFFINE_LIB
+$(OBJDIR)/affine.o: $(ROOT_DIR)/affine/affine.cc
+	$(CPP) -c $(CPPFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
+endif
+
+ifdef FIXED_POINT_LIB
+$(OBJDIR)/TrigLookup.o: $(ROOT_DIR)/fixed-point/lib/TrigLookup.cc
+	$(CPP) -c $(CPPFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
+endif
+
 ifdef UI_LIB
 $(OBJDIR)/ui.o: $(ROOT_DIR)/tft-display/ui-lib/ui.cc
 	$(CPP) -c $(CPPFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
 endif
-
 
 ######################################
 # Recurse into subdirectories

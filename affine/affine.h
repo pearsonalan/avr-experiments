@@ -8,7 +8,8 @@
 #include <FixedPoints.h>
 #include <FixedPointsCommon.h>
 
-using fixed = SFixed<15, 16>;
+// using fixed = SFixed<15, 16>;
+using fixed = SFixed<9, 6>;
 
 //
 // Represents the transorm matrix:
@@ -21,6 +22,19 @@ class AffineTransform {
 public:
   AffineTransform(fixed a, fixed b, fixed c, fixed d, fixed e, fixed f) :
       a_(a), b_(b), c_(c), d_(d), e_(e), f_(f) {}
+  AffineTransform() : a_(1), b_(0), c_(0), d_(1), e_(0), f_(0) {}
+  AffineTransform(const AffineTransform& t) : a_(t.a_), b_(t.b_), c_(t.c_),
+                                              d_(t.d_), e_(t.e_), f_(t.f_) {}
+
+  AffineTransform& operator=(const AffineTransform& t) {
+    a_ = t.a_;
+    b_ = t.b_;
+    c_ = t.c_;
+    d_ = t.d_;
+    e_ = t.e_;
+    f_ = t.f_;
+    return *this;
+  }
 
   const fixed& a() const { return a_; }
   const fixed& b() const { return b_; }

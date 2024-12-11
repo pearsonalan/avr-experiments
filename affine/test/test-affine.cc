@@ -51,9 +51,30 @@ void TestScaleAndTranslate() {
   std::cout << "S * (T * P):\n" << s * (t * p) << std::endl;
 }
 
+void TestScaleTranslateRotate() {
+  std::cout << "TEST SCALE, TRANSLATE, ROTATE" << std::endl;
+
+  AffineTransform s = AffineTransform::Scale(1.0, -1.0);
+  std::cout << "S:\n" << s << std::endl;
+
+  AffineTransform t = AffineTransform::Translate(-120, 120);
+  std::cout << "T:\n" << t << std::endl;
+
+  AffineTransform r = AffineTransform::Rotate(45.0);
+  std::cout << "R:\n" << r << std::endl;
+
+  Point2D p(0, 0);
+  std::cout << "P:\n" << p << std::endl;
+
+  std::cout << "R * (T * (S * P)):\n" << r * (t * (s * p)) << std::endl;
+  std::cout << "(R * T) * (S * P)):\n" << ((r * t) * (s * p)) << std::endl;
+  std::cout << "(R * (T * S)) * P:\n" << (r * (t * s)) * p << std::endl;
+  std::cout << "((R * T) * S) * P:\n" << ((r * t) * s) * p << std::endl;
+}
 int main() {
-  //TestRotate();
+  TestRotate();
   TestRotateAndScale();
-  //TestScaleAndTranslate();
+  TestScaleAndTranslate();
+  TestScaleTranslateRotate();
   return 0;
 }

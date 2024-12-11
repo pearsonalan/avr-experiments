@@ -1,3 +1,7 @@
+#ifdef ARDUINO
+#include <Arduino.h>
+#endif
+
 #ifdef AFFINE_IOSTREAMS
 #include <iostream>
 #endif
@@ -27,7 +31,7 @@ AffineTransform operator*(const AffineTransform& m1, const AffineTransform& m2) 
                           m1.a() * m2.c() + m1.c() * m2.d(),
                           m1.b() * m2.c() + m1.d() * m2.d(),
                           m1.a() * m2.e() + m1.c() * m2.f() + m1.e(),
-                          m1.b() * m2.a() + m1.d() * m2.f() + m1.f());
+                          m1.b() * m2.e() + m1.d() * m2.f() + m1.f());
 }
 
 Point2D operator*(const AffineTransform& m, const Point2D& p) {
