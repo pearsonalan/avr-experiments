@@ -47,7 +47,7 @@ ifeq ($(MCU), atmega328p)
 endif
 
 ifeq ($(MCU), atmega328)
-  $(info Building for ATmega644pa)
+  $(info Building for ATmega328)
   AVRDUDE_MCU=atmega328
   ifndef F_CPU
     F_CPU=1000000L
