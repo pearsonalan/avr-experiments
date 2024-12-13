@@ -20,5 +20,7 @@ int iteration = 0;
 void loop() {
   Serial.print("iteration ");
   Serial.println(iteration++);
+  Serial.print("Time is ");
+  Serial.println((float)micros()/1000000.0);
   delay(1000);
 }
