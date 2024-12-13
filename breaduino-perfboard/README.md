@@ -12,11 +12,11 @@ when or why I built this. It has:
 * a 16Mhz oscillator
 * An external power connector with switch
 * A connector for the AVR Pocket Programmer
-* A connector for the FT232R breakout
+* A connector for a USB interface
 
 ![Image of breaduino](img/IMG_0439.jpg)
 
-## FT232 breakout
+## FT232 breakout (DID NOT WORK!!!)
 
 * [SparkFun product page](https://www.sparkfun.com/products/12731)
 * [FTDI Tutorial at SparkFun](https://learn.sparkfun.com/tutorials/how-to-install-ftdi-drivers)
@@ -26,7 +26,40 @@ when or why I built this. It has:
 
 Using the FT232 breakout required me to install a driver on Mac OS X.
 
-On my Work Mac using Mac OS 14, it did not allow the driver to run.
+On my Work Mac using Mac OS 14, it did not allow the driver to run. Also was not able to
+get FTDI drivers to run on Windows laptop (gigantic) or on personal Mac laptop (ramona).
+
+So I've given up on FTDI. However...
+
+## Homebuilt USB interface
+
+I was able to get this breaduino talking over Serial using my homebuilt USB
+interface and some Jumper Wires.
+
+![Image of board with USB interface attached](img/IMG_0469.jpg)
+
+The pinout on the USB Interface card is:
+
+```
+1  VCC
+2  Tx
+3  Rx
+4  GND
+```
+
+The pinout on the boarduino for USB interface is (from top to bottom):
+
+```
+1  GND
+2  VCC
+3  Rx
+4  Tx
+```
+
+Wiring this up using jumpers to the USB Intface card, I was able to connect
+on my Windows laptop to COM4: in the Arduino IDE and get Serial output to
+display.
+
 
 ## Install
 
@@ -45,10 +78,9 @@ $ make upload-isp
 
 ## Serial communications
 
-The SparkFun FT232R breakout can be used for serial communications with this
-board.
+The USB interface board wired as above can be used for Serial communications
+with this board.
 
-![Image with FT232R breakout attached](img/IMG_0441.jpg)
 
 Then on Mac OS X, use screen to communicate with the device:
 
@@ -64,3 +96,5 @@ You can't update the device through the USB port when screen is running.
 To update the device, you have to kill the serial connection with `^A - K`.
 
 
+For Windows, I wrote a Serial Monitor program (in the WindowsSeraial repo,
+run monitor.exe in the Monitor directory).
