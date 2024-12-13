@@ -11,7 +11,7 @@ void setup() {
 int iteration = 0;
 
 void loop() {
-  Serial.print("Looping. Iteration ");
+  Serial.print("Looping... iteration ");
   Serial.println(iteration);
   digitalWrite(13, HIGH);
   delay(500);
