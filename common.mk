@@ -58,7 +58,7 @@ ifeq ($(MCU), atmega644pa)
   $(info Building for ATmega644pa)
   AVRDUDE_MCU=m644p
   ifndef F_CPU
-    F_CPU=1000000L
+    F_CPU=20000000L
   endif
 endif
 

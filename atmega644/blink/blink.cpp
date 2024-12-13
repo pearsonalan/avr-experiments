@@ -1,17 +1,10 @@
-/*
-  Blink
-  Turns on an LED on for one second, then off for one second, repeatedly.
-
-  Most Arduinos have an on-board LED you can control. On the Uno and
-  Leonardo, it is attached to digital pin 13. If you're unsure what
-  pin the on-board LED is connected to on your Arduino model, check
-  the documentation at http://arduino.cc
-
-  This example code is in the public domain.
-
-  modified 8 May 2014
-  by Scott Fitzgerald
- */
+//
+// This Blink program is for the ATmega644pa with a 20Mhz external crystal
+// oscillator
+//
+// Wiring:
+//   PA0 (pin 40) -> LED -> 220R -> GND
+//
 
 #include <Arduino.h>
 
@@ -24,7 +17,7 @@ void setup() {
 // the loop function runs over and over again forever
 void loop() {
   PINA = 1;
-  delay(100);                       // wait for a second
+  delay(500);
   PINA = 0;
-  delay(100);                       // wait for a second
+  delay(500);
 }
