@@ -19,11 +19,16 @@
         {
             "name": "Arduino",
             "includePath": [
-                "${workspaceFolder}/**",
-                "C:/Arduino/hardware/tools/avr/avr/include/**",
-                "C:/Arduino/hardware/arduino/avr/cores/arduino",
-                "C:/Arduino/hardware/arduino/avr/variants/standard",
-                "C:/Arduino/libraries/Servo/src"
+                "/Users/alanp/src/electronics/avr-experiments/**",
+                "/Users/alanp/Documents/Arduino/libraries/**",
+                "/Users/alanpearson/Documents/Arduino/libraries/**",
+                "/Arduino/hardware/tools/avr/avr/include/**",
+                "/Users/alanp/src/electronics/avr-experiments/C",
+                "/Arduino/hardware/arduino/avr/cores/arduino",
+                "/Users/alanp/src/electronics/avr-experiments/C",
+                "/Arduino/hardware/arduino/avr/variants/standard",
+                "/Users/alanp/src/electronics/avr-experiments/C",
+                "/Arduino/libraries/Servo/src"
             ],
             "defines": [
                 "_DEBUG",
@@ -37,7 +42,26 @@
             "compilerPath": "C:/Arduino/hardware/tools/avr/bin/avr-g++",
             "cStandard": "c17",
             "cppStandard": "c++17",
-            "intelliSenseMode": "linux-gcc-x64"
+            "intelliSenseMode": "linux-gcc-x64",
+            "compilerPathInCppPropertiesJson": "C:/Arduino/hardware/tools/avr/bin/avr-g++",
+            "mergeConfigurations": false,
+            "browse": {
+                "path": [
+                    "/Users/alanp/src/electronics/avr-experiments/**",
+                    "/Users/alanp/Documents/Arduino/libraries/**",
+                    "/Users/alanpearson/Documents/Arduino/libraries/**",
+                    "/Users/alanp/src/electronics/avr-experiments/C",
+                    "/Arduino/hardware/tools/avr/avr/include/**",
+                    "/Users/alanp/src/electronics/avr-experiments/C",
+                    "/Arduino/hardware/arduino/avr/cores/arduino",
+                    "/Users/alanp/src/electronics/avr-experiments/C",
+                    "/Arduino/hardware/arduino/avr/variants/standard",
+                    "/Users/alanp/src/electronics/avr-experiments/C",
+                    "/Arduino/libraries/Servo/src",
+                    "${workspaceFolder}"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            }
         }
     ],
     "version": 4

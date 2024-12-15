@@ -18,3 +18,16 @@ experiments I have:
 
 The file [README.avr-asm.md](README.avr-asm.md) has some notes on how to
 debug AVR assembly programs using `simavr` and `avr-gdb`.
+
+I'm in the process of updating the build support to use the new Arduino IDE.
+For now running `make` will build with the older IDE, whereas `IDE=2 make` builds with
+the new IDE (v.2.2).
+
+The key locations in the new IDE are:
+ 
+ * MacOS
+   * /Applications/Arduino\ IDE.app
+   * ~/Documents/Arduino
+   * ~/Library/Arduino15
+  
+  

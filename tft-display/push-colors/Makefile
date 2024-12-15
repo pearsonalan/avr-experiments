@@ -1,0 +1,18 @@
+PROG=tft-push-colors
+
+ifndef PORT
+  PORT=/dev/cu.usbmodem1411101
+endif
+
+BAUD=115200
+
+SPI=1
+WIRE=1
+ADAFRUIT_GFX=1
+ADAFRUIT_TFTLCD=1
+ADAFRUIT_FT6206=1
+ADAFRUIT_BUSIO=1
+
+NO_ARDUINO_MAIN=1
+
+include ../../common.mk
