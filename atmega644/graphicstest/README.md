@@ -40,3 +40,22 @@ Rounded rects (filled)   688564
 Done!
 ```
 
+## Graphics test results using ATmega644pa @ 20Mhz
+
+```
+Benchmark                Time (microseconds)
+Screen fill              182481
+Text                     243486
+Lines                    2458881
+Horiz/Vert Lines         27720
+Rectangles (outline)     26727
+Rectangles (filled)      411336
+Circles (filled)         454875
+Circles (outline)        1073811
+Triangles (outline)      524181
+Triangles (filled)       620256
+Rounded rects (outline)  332463
+Rounded rects (filled)   534555
+Done!
+```
+
