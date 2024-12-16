@@ -117,17 +117,17 @@ void init() {
 int main() {
 	init();
 
-  // Set direction of PIN B5 and B4 to be output
-	DDRB = (1<<DDB5) | (1<<DDB4);
-	PORTB = 0;
+	// Set direction of PIN D6 to be output
+	DDRD = (1<<DDD6);
+	PORTD = 0;
 
 	// Add nop for synchronization.... why???
 	_NOP();
 
 	for (;;) {
-		PINB |= (1<<PB5);    // Turn pin B5 on
+		PIND |= (1<<PD6);    // Turn pin D6 on
 		delay(500);          // Delay 500 miliseconds
-		PINB &= ~(1<<PB5);   // Turn pin B5 off
+		PIND &= ~(1<<PD6);   // Turn pin D6 off
 		delay(500);          // Delay 500 miliseconds
 	}
 
