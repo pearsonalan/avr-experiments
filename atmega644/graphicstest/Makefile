@@ -1,0 +1,13 @@
+PROG=graphicstest
+MODULES=Adafruit_TFTLCD
+HTML=README.html
+
+MCU=atmega644pa
+F_CPU=16000000L
+
+SPI=1
+WIRE=1
+ADAFRUIT_GFX=1
+ADAFRUIT_BUSIO=1
+
+include ../../common.mk
