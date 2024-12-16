@@ -57,6 +57,7 @@ endif
 ifeq ($(MCU), atmega644pa)
   $(info Building for ATmega644pa)
   AVRDUDE_MCU=m644p
+  ARDUINO_ID=10607
   ifndef F_CPU
     F_CPU=20000000L
   endif
