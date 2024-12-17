@@ -109,14 +109,19 @@ ADAFRUIT_TFTLCD_LIB=$(ARDUINO_LIBRARIES)/Adafruit_TFTLCD_Library
 INCLUDES +=	-I$(ADAFRUIT_TFTLCD_LIB)
 endif
 
-ifdef ADAFRUIT_TFTLCD
+ifdef ADAFRUIT_FT6206
 ADAFRUIT_FT6206_LIB=$(ARDUINO_LIBRARIES)/Adafruit_FT6206_Library
 INCLUDES +=	-I$(ADAFRUIT_FT6206_LIB)
 endif
 
-ifdef ADAFRUIT_TFTLCD
+ifdef ADAFRUIT_BUSIO
 ADAFRUIT_BUSIO_LIB=$(ARDUINO_LIBRARIES)/Adafruit_BusIO
 INCLUDES +=	-I$(ADAFRUIT_BUSIO_LIB)
+endif
+
+ifdef TFTDISPLAY_LIB
+TFTDISPLAY_LIB_DIR=$(ROOT_DIR)/atmega644/tft-lib
+INCLUDES += -I$(TFTDISPLAY_LIB_DIR)
 endif
 
 ifdef FIXED_POINT_LIB
@@ -202,6 +207,10 @@ endif
 
 ifdef UI_LIB
 OBJS += $(OBJDIR)/ui.o
+endif
+
+ifdef TFTDISPLAY_LIB
+OBJS += $(OBJDIR)/tft-display.o
 endif
 
 # PANDOC_TITLE_FLAG=--metadata title="Electronics Notebook - $(@B)"
@@ -299,6 +308,11 @@ endif
 
 ifdef UI_LIB
 $(OBJDIR)/ui.o: $(ROOT_DIR)/tft-display/ui-lib/ui.cc
+	$(CPP) -c $(CPPFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
+endif
+
+ifdef TFTDISPLAY_LIB
+$(OBJDIR)/tft-display.o: $(TFTDISPLAY_LIB_DIR)/tft-display.cc
 	$(CPP) -c $(CPPFLAGS) $(DEFINES) $(INCLUDES) -o $@ $<
 endif
 
