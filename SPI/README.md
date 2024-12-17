@@ -2,7 +2,7 @@
 
 Test program to test SPI between two ATmega328 MCUs.
 
-This program uses two circuits like the [Serial]()../serial/README.md) Test
+This program uses two circuits like the [Serial](../serial/README.md) Test
 Circuit, connected together for SPI:
 
 ```
