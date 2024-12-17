@@ -19,4 +19,4 @@ UI_LIB=1
 
 NO_ARDUINO_MAIN=1
 
-include ../../common.mk
+include ../../../common.mk

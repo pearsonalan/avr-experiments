@@ -219,7 +219,15 @@ PANDOC_FLAGS=-t html -s --mathjax $(PANDOC_TITLE_FLAG)
 
 .PHONY: all build clean docs dirs upload $(DIRS)
 
-all: build docs dirs
+all: dirs
+
+ifdef PROG
+all: build
+endif
+
+ifdef HTML
+all: docs
+endif
 
 build: $(OBJDIR) $(ELF) $(EEP) $(HEX)
 
