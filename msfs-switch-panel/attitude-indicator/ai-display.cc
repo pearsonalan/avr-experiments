@@ -1,6 +1,9 @@
+#include <Arduino.h>
+
 #include <Adafruit_GFX.h>    // Core graphics library
-#include <Adafruit_TFTLCD.h> // Hardware-specific library
 #include <Adafruit_FT6206.h> // Touch Screen Library
+
+#include <tft-display.h> // Hardware-specific library
 
 #include <FixedPoints.h>
 #include <FixedPointsCommon.h>
@@ -8,15 +11,6 @@
 
 #include "ui.h"
 #include "affine.h"
-
-#define LCD_CS A3 // Chip Select goes to Analog 3
-#define LCD_CD A2 // Command/Data goes to Analog 2
-#define LCD_WR A1 // LCD Write goes to Analog 1
-#define LCD_RD A0 // LCD Read goes to Analog 0
-#define LCD_RESET A4 // Can alternately just connect to Arduino's reset pin
-
-Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
-Adafruit_FT6206 ts;
 
 class Orientation {
  public:
@@ -159,6 +153,7 @@ public:
 
 void BitmapWindow::Draw(Adafruit_GFX* gfx) {
   Serial.println(F("Starting draw"));
+  TFTDisplay* tft = (TFTDisplay*)gfx;
   auto start_time = micros();
 
   Image img;
@@ -171,8 +166,8 @@ void BitmapWindow::Draw(Adafruit_GFX* gfx) {
     if (overlay.IsOverlayLine(line)) {
       overlay.OverlayLine(line, colors);
     }
-    tft.setAddrWindow(x() + start, y() + line, x() + start + end, y() + line);
-    tft.pushColors(colors + start, end - start, true);
+    tft->setAddrWindow(x() + start, y() + line, x() + start + end, y() + line);
+    tft->pushColors(colors + start, end - start, true);
   }
 
   Serial.print(F("draw took "));
@@ -181,7 +176,8 @@ void BitmapWindow::Draw(Adafruit_GFX* gfx) {
   Validate();
 }
 
-void setup() {
+void setup(TFTDisplay& tft, Adafruit_FT6206& ts) {
+  Serial.println("Setup");
   uint16_t identifier = tft.readID();
 
   if(identifier == 0x9325) {
@@ -200,9 +196,11 @@ void setup() {
     return;
   }
 
+  Serial.println("TFT Begin");
   tft.begin(identifier);
   tft.setRotation(3);
 
+  Serial.println("TS Begin");
   ts.begin();
 
   tft.fillScreen(BLACK);
@@ -211,10 +209,15 @@ void setup() {
 int main() {
   init();
 
-  tft.reset();
-
   Serial.begin(115200);
   while (!Serial) delay(10);
+
+  Serial.println("Begin");
+
+  TFTDisplay tft;
+  Adafruit_FT6206 ts;
+
+  tft.reset();
 
   Panel panel(1, 1, tft.width(), tft.height());
   Orientation orientation;
@@ -230,7 +233,10 @@ int main() {
   panel.AddChild(&buttonD);
   panel.AddChild(&bitmap_window);
 
-  setup();
+  setup(tft, ts);
 
+  Serial.println("Entering UI Loop");
   UILoop(&tft, &ts, &panel);
+  Serial.println("Entering infininte loop");
+  for (;;) ;
 }
