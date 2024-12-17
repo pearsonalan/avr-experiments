@@ -1,29 +1,18 @@
-// IMPORTANT: SEE COMMENTS @ LINE 15 REGARDING SHIELD VS BREAKOUT BOARD USAGE.
-
 // Graphics library by ladyada/adafruit with init code from Rossum
 // MIT license
 
-#ifndef _ADAFRUIT_TFTLCD_H_
-#define _ADAFRUIT_TFTLCD_H_
+// Changed by alanpearson@mac.com
 
-#if ARDUINO >= 100
+#ifndef _TFT_DISPLAY_H_
+#define _TFT_DISPLAY_H_
+
 #include "Arduino.h"
-#else
-#include "WProgram.h"
-#endif
 
 #include <Adafruit_GFX.h>
 
-// **** IF USING THE LCD BREAKOUT BOARD, COMMENT OUT THIS NEXT LINE. ****
-// **** IF USING THE LCD SHIELD, LEAVE THE LINE ENABLED:             ****
-
-//#define USE_ADAFRUIT_SHIELD_PINOUT 1
-
-class Adafruit_TFTLCD : public Adafruit_GFX {
-
+class TFTDisplay : public Adafruit_GFX {
 public:
-  Adafruit_TFTLCD(uint8_t cs, uint8_t cd, uint8_t wr, uint8_t rd, uint8_t rst);
-  Adafruit_TFTLCD(void);
+  TFTDisplay(void);
 
   void begin(uint16_t id = 0x9325);
   void drawPixel(int16_t x, int16_t y, uint16_t color);
@@ -44,43 +33,13 @@ public:
   uint32_t readReg(uint8_t r);
 
 private:
-  void init(),
-  // These items may have previously been defined as macros
-  // in pin_magic.h.  If not, function versions are declared:
-#ifndef write8
-      write8(uint8_t value),
-#endif
-#ifndef setWriteDir
-      setWriteDir(void),
-#endif
-#ifndef setReadDir
-      setReadDir(void),
-#endif
-#ifndef writeRegister8
-      writeRegister8(uint8_t a, uint8_t d),
-#endif
-#ifndef writeRegister16
-      writeRegister16(uint16_t a, uint16_t d),
-#endif
-      writeRegister24(uint8_t a, uint32_t d),
-      writeRegister32(uint8_t a, uint32_t d),
-#ifndef writeRegisterPair
-      writeRegisterPair(uint8_t aH, uint8_t aL, uint16_t d),
-#endif
-      setLR(void), flood(uint16_t color, uint32_t len);
+  void init();
+  void setLR(void);
+  void flood(uint16_t color, uint32_t len);
+  void writeRegister24(uint8_t a, uint32_t d);
+  void writeRegister32(uint8_t a, uint32_t d);
+
   uint8_t driver;
-
-#ifndef read8
-  uint8_t read8fn(void);
-#define read8isFunctionalized
-#endif
-
-#if 0
-  volatile uint8_t *csPort, *cdPort, *wrPort, *rdPort;
-  uint8_t csPinSet, cdPinSet, wrPinSet, rdPinSet, csPinUnset, cdPinUnset,
-      wrPinUnset, rdPinUnset, _reset;
-#endif
-
 };
 
 // For compatibility with sketches written for older versions of library.
