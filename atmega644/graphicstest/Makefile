@@ -1,5 +1,4 @@
 PROG=graphicstest
-MODULES=Adafruit_TFTLCD
 HTML=README.html
 
 MCU=atmega644pa
@@ -9,5 +8,6 @@ SPI=1
 WIRE=1
 ADAFRUIT_GFX=1
 ADAFRUIT_BUSIO=1
+TFTDISPLAY_LIB=1
 
 include ../../common.mk
