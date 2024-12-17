@@ -1,5 +1,4 @@
 #include <Adafruit_GFX.h>    // Core graphics library
-#include <Adafruit_TFTLCD.h> // Hardware-specific library
 #include <Adafruit_FT6206.h> // Touch Screen Library
 
 #include "ui.h"
@@ -135,7 +134,6 @@ void UILoop(Adafruit_GFX* gfx, Adafruit_FT6206* ts, Window* main_window) {
 
   for (;;) {
     TS_Point p(0,0,0);
-
     if (ts->touched()) {
       p = ts->getPoint();
       RotateTouchPoint(&p, 3);
@@ -163,7 +161,6 @@ void UILoop(Adafruit_GFX* gfx, Adafruit_FT6206* ts, Window* main_window) {
       is_touched = false;
     }
     last = p;
-
     DispatchProc(gfx, main_window);
   }
 }

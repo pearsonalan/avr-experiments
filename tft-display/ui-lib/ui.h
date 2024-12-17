@@ -1,5 +1,4 @@
 #include <Adafruit_GFX.h>    // Core graphics library
-#include <Adafruit_TFTLCD.h> // Hardware-specific library
 #include <Adafruit_FT6206.h> // Touch Screen Library
 
 #define RGB(r,g,b) (int16_t)(((((int16_t)r)&0x1F)<<11) | \
